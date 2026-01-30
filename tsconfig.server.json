@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist-server",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": false,
+    "noEmit": false
+  },
+  "include": ["server/**/*", "shared/**/*"],
+  "exclude": ["node_modules", "client", "dist", "dist-server"]
+}
