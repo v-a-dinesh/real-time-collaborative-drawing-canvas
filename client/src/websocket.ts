@@ -64,8 +64,10 @@ export class WebSocketManager {
 
     this.connectionState = 'connecting';
 
-    // Connect directly to the Socket.io server on port 3000
-    const serverUrl = 'http://localhost:3000';
+    // Auto-detect server URL: use current origin in production, localhost in development
+    const serverUrl = import.meta.env.PROD 
+      ? window.location.origin  // Production: same origin (Render, Railway, etc.)
+      : 'http://localhost:3000'; // Development: separate server
     console.log('Connecting to:', serverUrl);
 
     this.socket = io(serverUrl, {
