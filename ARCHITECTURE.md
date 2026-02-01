@@ -1,48 +1,108 @@
-# Architecture Documentation
+# 🏗️ Architecture Documentation
 
-## Real-Time Collaborative Drawing Canvas
+## Flamdraw - Real-Time Collaborative Drawing Canvas
 
-This document describes the technical architecture, design decisions, and implementation details of the collaborative drawing application.
+<div align="center">
+
+**Technical Architecture, Design Decisions, and Implementation Details**
+
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Flamdraw-4CAF50)](https://real-time-collaborative-drawing-canvas-rqd8.onrender.com/)
+[![README](https://img.shields.io/badge/📖%20README-Documentation-blue)](README.md)
+
+</div>
+
+---
+
+## 📋 Table of Contents
+
+1. [System Overview](#-system-overview)
+2. [Data Flow Diagrams](#-data-flow-diagrams)
+3. [WebSocket Protocol](#-websocket-protocol)
+4. [Core Modules](#-core-modules)
+5. [Undo/Redo Strategy](#-undoredo-strategy)
+6. [Room Architecture](#-room-architecture)
+7. [Performance Optimizations](#-performance-optimizations)
+8. [Input Validation & Security](#-input-validation--security)
+9. [Conflict Resolution](#-conflict-resolution)
+10. [Scalability Considerations](#-scalability-considerations)
+11. [File Structure](#-file-structure)
+12. [Testing Guide](#-testing-guide)
 
 ---
 
 ## 📊 System Overview
 
+### Architecture Diagram
+
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                            CLIENT BROWSER                                │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────┐ │
-│  │    main.ts     │──│     ui.ts      │──│       canvas.ts            │ │
-│  │ (Orchestrator) │  │   (Toolbar)    │  │  (Drawing Engine)          │ │
-│  └───────┬────────┘  └────────────────┘  └─────────────┬──────────────┘ │
-│          │                                              │                │
-│          └──────────────────┬───────────────────────────┘                │
-│                             │                                            │
-│                    ┌────────▼────────┐                                   │
-│                    │  websocket.ts   │                                   │
-│                    │ (Socket.io)     │                                   │
-│                    └────────┬────────┘                                   │
-└─────────────────────────────┼───────────────────────────────────────────┘
-                              │ WebSocket Connection (Socket.io)
-                              │ Events: stroke:*, cursor:*, room:*, undo/redo
-                              │
-┌─────────────────────────────▼───────────────────────────────────────────┐
-│                            SERVER (Node.js)                              │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │                        server.ts                                 │    │
-│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │    │
-│  │  │   Room Manager  │  │  State Manager  │  │  Event Handler  │  │    │
-│  │  │ (rooms Map)     │  │ (strokes/shapes)│  │ (Socket.io)     │  │    │
-│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │    │
-│  └─────────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT BROWSER                                      │
+│                                                                                  │
+│  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────────────┐ │
+│  │      main.ts       │  │       ui.ts        │  │        canvas.ts           │ │
+│  │   (Orchestrator)   │  │    (Toolbar UI)    │  │    (Drawing Engine)        │ │
+│  │                    │  │                    │  │                            │ │
+│  │ • Initialization   │  │ • Tool selection   │  │ • Raw Canvas API           │ │
+│  │ • Event binding    │  │ • Color/stroke     │  │ • DPR scaling              │ │
+│  │ • State management │  │ • Menu dropdown    │  │ • Point smoothing          │ │
+│  │ • Export functions │  │ • Help panel       │  │ • Shape rendering          │ │
+│  └─────────┬──────────┘  └─────────┬──────────┘  └─────────────┬──────────────┘ │
+│            │                       │                           │                 │
+│            └───────────────────────┴───────────────────────────┘                 │
+│                                    │                                             │
+│                           ┌────────▼────────┐                                    │
+│                           │  websocket.ts   │                                    │
+│                           │  (Socket.io)    │                                    │
+│                           │                 │                                    │
+│                           │ • Connection    │                                    │
+│                           │ • Reconnection  │                                    │
+│                           │ • Event emit    │                                    │
+│                           │ • State sync    │                                    │
+│                           └────────┬────────┘                                    │
+└────────────────────────────────────┼────────────────────────────────────────────┘
+                                     │
+                                     │ WebSocket (Socket.io)
+                                     │ Bidirectional Real-Time Communication
+                                     │
+┌────────────────────────────────────▼────────────────────────────────────────────┐
+│                              SERVER (Node.js)                                    │
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────────┐   │
+│  │                         production.ts / server.ts                         │   │
+│  │                                                                           │   │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌───────────────────────────┐ │   │
+│  │  │  Room Manager   │  │  State Manager  │  │    Socket.io Handler      │ │   │
+│  │  │                 │  │                 │  │                           │ │   │
+│  │  │ • Room creation │  │ • Strokes[]     │  │ • Event routing           │ │   │
+│  │  │ • User tracking │  │ • Shapes[]      │  │ • Broadcasting            │ │   │
+│  │  │ • Room cleanup  │  │ • TextElements[]│  │ • Validation              │ │   │
+│  │  │ • Isolation     │  │ • Undo/Redo     │  │ • Error handling          │ │   │
+│  │  └─────────────────┘  └─────────────────┘  └───────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ┌──────────────────┐                                                           │
+│  │  Express Server  │  GET /         → Landing page                             │
+│  │                  │  GET /canvas   → Canvas app                               │
+│  │                  │  GET /health   → Health check                             │
+│  └──────────────────┘                                                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Technology Stack
+
+| Layer | Technology | Responsibility |
+|-------|------------|----------------|
+| **Presentation** | HTML5 Canvas, CSS3 | Rendering, UI |
+| **Client Logic** | TypeScript | Drawing, events, state |
+| **Communication** | Socket.io | Real-time sync |
+| **Server** | Node.js + Express | HTTP + WebSocket |
+| **Deployment** | Docker + Render | Containerization |
 
 ---
 
-## 📡 Data Flow Diagram
+## 📡 Data Flow Diagrams
 
-### Drawing Flow (User A draws → User B sees)
+### 1. Drawing Flow (User A draws → User B sees)
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -52,126 +112,326 @@ This document describes the technical architecture, design decisions, and implem
        │                   │                   │                   │
        │ mousedown         │                   │                   │
        │──────────────────>│                   │                   │
+       │                   │                   │                   │
        │                   │ stroke:start      │                   │
-       │                   │ {strokeId, x, y,  │                   │
+       │                   │ {strokeId, point, │                   │
        │                   │  color, width}    │                   │
        │                   │──────────────────>│                   │
+       │                   │                   │                   │
+       │                   │                   │ Validate input    │
+       │                   │                   │ Create stroke     │
+       │                   │                   │ Store in room     │
+       │                   │                   │                   │
        │                   │                   │ stroke:broadcast  │
        │                   │                   │──────────────────>│
-       │                   │                   │                   │ Draw on canvas
-       │ mousemove (x10)   │                   │                   │
-       │──────────────────>│                   │                   │
-       │                   │ stroke:move       │                   │
-       │                   │ {strokeId, x, y}  │                   │
-       │                   │──────────────────>│                   │
-       │                   │                   │ stroke:move:broadcast
+       │                   │                   │                   │
+       │                   │                   │                   │ Render stroke
+       │                   │                   │                   │ on canvas
+       │                   │                   │                   │
+       │ mousemove (x N)   │                   │                   │
+       │──────────────────>│ stroke:move       │                   │
+       │                   │ {strokeId, point} │                   │
+       │                   │──────────────────>│ stroke:move:      │
+       │                   │                   │ broadcast         │
        │                   │                   │──────────────────>│
-       │                   │                   │                   │ Continue line
+       │                   │                   │                   │ Add point
+       │                   │                   │                   │
        │ mouseup           │                   │                   │
-       │──────────────────>│                   │                   │
-       │                   │ stroke:end        │                   │
+       │──────────────────>│ stroke:end        │                   │
        │                   │ {strokeId}        │                   │
        │                   │──────────────────>│                   │
        │                   │                   │ Finalize stroke   │
-       │                   │                   │ (add to history)  │
-       │                   │                   │ stroke:end:broadcast
+       │                   │                   │ Add to history    │
+       │                   │                   │                   │
+       │                   │                   │ stroke:end:       │
+       │                   │                   │ broadcast         │
        │                   │                   │──────────────────>│
-       │                   │                   │                   │ Finalize stroke
+       │                   │                   │                   │ Finalize
        ▼                   ▼                   ▼                   ▼
 ```
 
-### State Synchronization Flow (New User Joins)
+### 2. State Synchronization (New User Joins)
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │  New User   │     │   Server    │     │Existing User│
 └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
        │                   │                   │
-       │ connect           │                   │
+       │ connect()         │                   │
        │──────────────────>│                   │
+       │                   │                   │
+       │                   │ Assign user ID    │
+       │                   │ Add to room       │
        │                   │                   │
        │ users:list        │                   │
        │<──────────────────│                   │
-       │ (all users +      │                   │
-       │  current user)    │                   │
+       │ {users[],         │                   │
+       │  currentUser}     │                   │
        │                   │                   │
        │ state:full        │                   │
        │<──────────────────│                   │
-       │ (strokes, shapes, │                   │
-       │  textElements)    │                   │
+       │ {strokes[],       │                   │
+       │  shapes[],        │                   │
+       │  textElements[]}  │                   │
+       │                   │                   │
+       │ Render all        │                   │
+       │ elements          │                   │
        │                   │                   │
        │                   │ user:joined       │
        │                   │──────────────────>│
-       │                   │                   │ (update users list)
+       │                   │ {user: User}      │
+       │                   │                   │ Update users
+       │                   │                   │ list
        ▼                   ▼                   ▼
+```
+
+### 3. Global Undo Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   User A    │     │   User B    │     │   Server    │     │  All Users  │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │                   │
+       │ Draw stroke       │                   │                   │
+       │───────────────────────────────────────>                   │
+       │                   │                   │ Store stroke      │
+       │                   │                   │ (timestamp: T1)   │
+       │                   │                   │                   │
+       │                   │ Draw shape        │                   │
+       │                   │──────────────────>│                   │
+       │                   │                   │ Store shape       │
+       │                   │                   │ (timestamp: T2)   │
+       │                   │                   │                   │
+       │ Press Ctrl+Z      │                   │                   │
+       │───────────────────────────────────────>                   │
+       │                   │                   │                   │
+       │                   │                   │ Find latest by    │
+       │                   │                   │ timestamp (T2)    │
+       │                   │                   │                   │
+       │                   │                   │ Remove shape      │
+       │                   │                   │ Push to redoStack │
+       │                   │                   │                   │
+       │                   │                   │ undo:redo:        │
+       │                   │                   │ broadcast         │
+       │                   │                   │──────────────────>│
+       │                   │                   │                   │
+       │                   │                   │                   │ Redraw all
+       │                   │                   │                   │ (shape gone)
+       ▼                   ▼                   ▼                   ▼
 ```
 
 ---
 
 ## 📨 WebSocket Protocol
 
-### Event Types
+### Event Reference
 
-| Event Name | Direction | Payload | Description |
-|------------|-----------|---------|-------------|
-| `stroke:start` | Client→Server | `{strokeId, x, y, color, width, tool}` | Begin new stroke |
-| `stroke:move` | Client→Server | `{strokeId, x, y}` | Add point to stroke |
-| `stroke:end` | Client→Server | `{strokeId}` | Finalize stroke |
-| `stroke:broadcast` | Server→Clients | `{stroke: Stroke}` | Broadcast stroke start |
-| `stroke:move:broadcast` | Server→Clients | `{strokeId, userId, x, y}` | Broadcast stroke point |
-| `stroke:end:broadcast` | Server→Clients | `{strokeId, userId}` | Broadcast stroke end |
-| `cursor:move` | Client→Server | `{x, y}` | User cursor position |
-| `cursor:update` | Server→Clients | `{userId, x, y, color, name}` | Broadcast cursor |
-| `shape:add` | Client→Server | `{shape: Shape}` | Add shape |
-| `shape:broadcast` | Server→Clients | `{shape: Shape}` | Broadcast shape |
-| `text:add` | Client→Server | `{text: TextElement}` | Add text |
-| `text:broadcast` | Server→Clients | `{text: TextElement}` | Broadcast text |
-| `undo` | Client→Server | - | Request undo |
-| `redo` | Client→Server | - | Request redo |
-| `undo:redo:broadcast` | Server→Clients | `{strokes, shapes, textElements, action}` | Full state after undo/redo |
-| `room:join` | Client→Server | `{roomId}` | Join room |
-| `room:joined` | Server→Client | `{roomId}` | Room join confirmation |
-| `state:request` | Client→Server | - | Request full state |
-| `state:full` | Server→Client | `{strokes, shapes, textElements}` | Full canvas state |
-| `user:joined` | Server→Clients | `{user: User}` | User joined notification |
-| `user:left` | Server→Clients | `{userId}` | User left notification |
-| `users:list` | Server→Client | `{users, currentUser}` | All users in room |
+#### Client → Server Events
 
-### Message Formats
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `stroke:start` | `StrokeStartPayload` | Begin a new freehand stroke |
+| `stroke:move` | `StrokeMovePayload` | Add point to current stroke |
+| `stroke:end` | `StrokeEndPayload` | Finalize the stroke |
+| `shape:add` | `ShapePayload` | Add a completed shape |
+| `text:add` | `TextPayload` | Add a text element |
+| `cursor:move` | `CursorPayload` | Update cursor position |
+| `undo` | - | Request global undo |
+| `redo` | - | Request global redo |
+| `room:join` | `RoomJoinPayload` | Join a specific room |
+| `room:create` | - | Create a new room |
+| `state:request` | - | Request full canvas state |
+
+#### Server → Client Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `stroke:broadcast` | `Stroke` | Broadcast new stroke to room |
+| `stroke:move:broadcast` | `StrokeMoveData` | Broadcast stroke point |
+| `stroke:end:broadcast` | `StrokeEndData` | Broadcast stroke completion |
+| `shape:broadcast` | `Shape` | Broadcast new shape |
+| `text:broadcast` | `TextElement` | Broadcast new text |
+| `cursor:update` | `CursorData` | Broadcast cursor position |
+| `state:full` | `CanvasState` | Send full canvas state |
+| `users:list` | `UsersListData` | Send all users in room |
+| `user:joined` | `User` | Notify user joined |
+| `user:left` | `{userId}` | Notify user left |
+| `undo:redo:broadcast` | `CanvasState` | Broadcast state after undo/redo |
+| `room:joined` | `{roomId}` | Confirm room join |
+
+### Payload Schemas
 
 ```typescript
 // Stroke Start
-{
-  strokeId: "lxyz123abc456",  // Unique ID (timestamp + random)
-  x: 150.5,                   // Canvas X coordinate
-  y: 200.3,                   // Canvas Y coordinate
-  color: "#FF0000",           // Hex color
-  width: 5,                   // Stroke width (1-50)
-  tool: "brush" | "eraser"    // Tool type
+interface StrokeStartPayload {
+  strokeId: string;      // Unique ID (timestamp + random)
+  x: number;             // Canvas X coordinate
+  y: number;             // Canvas Y coordinate
+  color: string;         // Hex color (#RRGGBB)
+  width: number;         // Stroke width (1-50)
+  tool: 'brush' | 'eraser';
 }
 
 // Stroke Object (Server Storage)
-{
-  id: "lxyz123abc456",
-  points: [{x: 150.5, y: 200.3}, ...],
-  color: "#FF0000",
-  width: 5,
-  tool: "brush",
-  userId: "socket-id-abc",
-  timestamp: 1706640000000
+interface Stroke {
+  id: string;
+  points: Point[];
+  color: string;
+  width: number;
+  tool: 'brush' | 'eraser';
+  userId: string;
+  timestamp: number;
 }
 
 // Shape Object
-{
-  id: "shape123",
-  type: "rectangle" | "circle" | "line",
-  startPoint: {x: 100, y: 100},
-  endPoint: {x: 200, y: 200},
-  color: "#0000FF",
-  width: 3,
-  filled: true,
-  userId: "socket-id-abc",
-  timestamp: 1706640000000
+interface Shape {
+  id: string;
+  type: 'rectangle' | 'circle' | 'line';
+  startPoint: Point;
+  endPoint: Point;
+  color: string;
+  width: number;
+  filled: boolean;
+  userId: string;
+  timestamp: number;
+}
+
+// Text Element
+interface TextElement {
+  id: string;
+  text: string;
+  position: Point;
+  fontSize: number;
+  color: string;
+  userId: string;
+  timestamp: number;
+}
+
+// Full Canvas State
+interface CanvasState {
+  strokes: Stroke[];
+  shapes: Shape[];
+  textElements: TextElement[];
+}
+```
+
+---
+
+## 🧩 Core Modules
+
+### 1. main.ts - Application Orchestrator
+
+**Responsibility:** Initialize the application, bind events, coordinate modules.
+
+```typescript
+// Key Functions
+export class App {
+  constructor() {
+    this.canvas = new CanvasManager();
+    this.websocket = new WebSocketClient();
+    this.ui = new UIManager();
+  }
+
+  async initialize() {
+    // 1. Setup canvas with DPR scaling
+    // 2. Connect to WebSocket server
+    // 3. Bind tool callbacks
+    // 4. Setup keyboard shortcuts
+    // 5. Handle window resize
+  }
+
+  // Export functions
+  exportToPNG(): void;
+  exportToSVG(): void;
+  clearCanvas(): void;
+}
+```
+
+### 2. canvas.ts - Drawing Engine
+
+**Responsibility:** All canvas rendering using raw HTML5 Canvas API.
+
+```typescript
+export class CanvasManager {
+  private ctx: CanvasRenderingContext2D;
+  private dpr: number;  // Device Pixel Ratio
+
+  // Core rendering
+  drawStroke(stroke: Stroke): void;
+  drawShape(shape: Shape): void;
+  drawText(text: TextElement): void;
+  drawGhostCursor(cursor: CursorData): void;
+
+  // State management
+  redrawAll(state: CanvasState): void;
+  clear(): void;
+
+  // Event handling
+  handlePointerDown(e: PointerEvent): void;
+  handlePointerMove(e: PointerEvent): void;
+  handlePointerUp(e: PointerEvent): void;
+}
+```
+
+**Key Implementation Details:**
+- Uses `devicePixelRatio` for crisp rendering on retina displays
+- `lineCap: 'round'` and `lineJoin: 'round'` for smooth strokes
+- Point smoothing with exponential moving average
+- Incremental drawing (only new points, not full redraw)
+
+### 3. websocket.ts - Socket.io Client
+
+**Responsibility:** Handle all WebSocket communication.
+
+```typescript
+export class WebSocketClient {
+  private socket: Socket;
+  private connectionState: ConnectionState;
+  private offlineQueue: QueuedAction[];
+
+  connect(): Promise<void>;
+  disconnect(): void;
+
+  // Emit events
+  emitStrokeStart(data: StrokeStartPayload): void;
+  emitStrokeMove(data: StrokeMovePayload): void;
+  emitUndo(): void;
+  emitRedo(): void;
+
+  // Connection management
+  private handleReconnection(): void;
+  private flushOfflineQueue(): void;
+}
+```
+
+**Connection States:**
+```typescript
+enum ConnectionState {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  RECONNECTING = 'reconnecting',
+  ERROR = 'error'
+}
+```
+
+### 4. ui.ts - User Interface Manager
+
+**Responsibility:** Handle toolbar, menu, and UI interactions.
+
+```typescript
+export class UIManager {
+  setupFloatingToolbar(): void;
+  setupPropertiesPanel(): void;
+  setupMenuDropdown(): void;
+  setupHelpPanel(): void;
+  setupKeyboardShortcuts(): void;
+
+  // State updates
+  setActiveTool(tool: Tool): void;
+  setActiveColor(color: string): void;
+  setStrokeWidth(width: number): void;
+  updateUsersList(users: User[]): void;
 }
 ```
 
@@ -181,171 +441,361 @@ This document describes the technical architecture, design decisions, and implem
 
 ### The Challenge
 
-Global undo/redo is the hardest part of this application because:
-1. Multiple users can draw simultaneously
-2. User A should be able to undo User B's action
-3. All clients must stay in sync after undo/redo
+Implementing global undo/redo in a real-time collaborative environment is complex because:
+
+1. **Multiple users drawing simultaneously** - Who "owns" the undo?
+2. **Cross-user undo** - User A should be able to undo User B's last action
+3. **Consistency** - All clients must converge to the same state
 
 ### Our Solution: Timestamp-Based Global Stack
 
+We use a **single source of truth** on the server with **timestamp ordering**.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    SERVER STATE (Per Room)                   │
-│                                                              │
-│  strokes: [                                                  │
-│    {id: "s1", timestamp: 1000, userId: "A", points: [...]}, │
-│    {id: "s2", timestamp: 1500, userId: "B", points: [...]}, │
-│    {id: "s3", timestamp: 2000, userId: "A", points: [...]}, │
-│  ]                                                           │
-│                                                              │
-│  shapes: [                                                   │
-│    {id: "sh1", timestamp: 1200, type: "rectangle", ...},    │
-│  ]                                                           │
-│                                                              │
-│  textElements: [                                             │
-│    {id: "t1", timestamp: 1800, text: "Hello", ...},         │
-│  ]                                                           │
-│                                                              │
-│  redoStack: [                                                │
-│    [removed items from last undo],                          │
-│  ]                                                           │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    SERVER STATE (Per Room)                       │
+│                                                                  │
+│  strokes: [                                                      │
+│    {id: "s1", timestamp: 1000, userId: "A", points: [...]},     │
+│    {id: "s2", timestamp: 1500, userId: "B", points: [...]},     │
+│    {id: "s3", timestamp: 2000, userId: "A", points: [...]},     │
+│  ]                                                               │
+│                                                                  │
+│  shapes: [                                                       │
+│    {id: "sh1", timestamp: 1200, type: "rectangle", ...},        │
+│  ]                                                               │
+│                                                                  │
+│  textElements: [                                                 │
+│    {id: "t1", timestamp: 1800, text: "Hello", ...},             │
+│  ]                                                               │
+│                                                                  │
+│  redoStack: [                                                    │
+│    [items removed from last undo],                               │
+│  ]                                                               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Undo Algorithm
 
-```javascript
-function handleUndo() {
-  // 1. Find the most recent item across all types
-  const lastStroke = strokes[strokes.length - 1];
-  const lastShape = shapes[shapes.length - 1];
-  const lastText = textElements[textElements.length - 1];
-  
-  // 2. Compare timestamps to find truly last action
-  const times = [
+```typescript
+function handleUndo(roomId: string): void {
+  const room = rooms.get(roomId);
+
+  // 1. Find the most recent item across ALL types
+  const lastStroke = room.strokes[room.strokes.length - 1];
+  const lastShape = room.shapes[room.shapes.length - 1];
+  const lastText = room.textElements[room.textElements.length - 1];
+
+  // 2. Compare timestamps to find the truly last action
+  const timestamps = [
     lastStroke?.timestamp || 0,
     lastShape?.timestamp || 0,
     lastText?.timestamp || 0
   ];
-  const maxTime = Math.max(...times);
-  
-  // 3. Remove the most recent item
-  if (lastStroke?.timestamp === maxTime) {
-    removed = strokes.pop();
-  } else if (lastShape?.timestamp === maxTime) {
-    removed = shapes.pop();
-  } else if (lastText?.timestamp === maxTime) {
-    removed = textElements.pop();
+  const maxTimestamp = Math.max(...timestamps);
+
+  // 3. Remove the most recent item from appropriate array
+  let removed;
+  if (lastStroke?.timestamp === maxTimestamp) {
+    removed = room.strokes.pop();
+  } else if (lastShape?.timestamp === maxTimestamp) {
+    removed = room.shapes.pop();
+  } else if (lastText?.timestamp === maxTimestamp) {
+    removed = room.textElements.pop();
   }
-  
+
   // 4. Push to redo stack for potential redo
-  redoStack.push([removed]);
-  
-  // 5. Broadcast full state to ALL clients
+  if (removed) {
+    room.redoStack.push([removed]);
+  }
+
+  // 5. Broadcast FULL state to ALL clients in room
   io.to(roomId).emit('undo:redo:broadcast', {
-    strokes, shapes, textElements, action: 'undo'
+    strokes: room.strokes,
+    shapes: room.shapes,
+    textElements: room.textElements,
+    action: 'undo'
+  });
+}
+```
+
+### Redo Algorithm
+
+```typescript
+function handleRedo(roomId: string): void {
+  const room = rooms.get(roomId);
+
+  // 1. Pop from redo stack
+  const toRestore = room.redoStack.pop();
+  if (!toRestore) return;
+
+  // 2. Re-add items to appropriate arrays
+  for (const item of toRestore) {
+    if ('points' in item) {
+      room.strokes.push(item);
+    } else if ('type' in item && ['rectangle', 'circle', 'line'].includes(item.type)) {
+      room.shapes.push(item);
+    } else if ('text' in item) {
+      room.textElements.push(item);
+    }
+  }
+
+  // 3. Broadcast full state
+  io.to(roomId).emit('undo:redo:broadcast', {
+    strokes: room.strokes,
+    shapes: room.shapes,
+    textElements: room.textElements,
+    action: 'redo'
   });
 }
 ```
 
 ### Why This Works
 
-1. **Single Source of Truth**: Server maintains authoritative state
-2. **Timestamp Ordering**: Actions are ordered by when they occurred, not by user
-3. **Full State Broadcast**: After undo/redo, all clients receive complete state
-4. **Cross-User Undo**: Any user can undo the last action, regardless of who made it
+| Principle | Implementation |
+|-----------|----------------|
+| **Single Source of Truth** | Server maintains authoritative state |
+| **Timestamp Ordering** | Actions ordered by when they occurred, not by user |
+| **Full State Broadcast** | All clients receive complete state after undo/redo |
+| **Cross-User Undo** | Any user can undo any action (most recent by timestamp) |
 
-### Trade-offs
+### Trade-offs Analysis
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Full State Broadcast** (our approach) | Simple, always consistent | More bandwidth on undo |
-| Operation Transformation | Less bandwidth | Complex to implement |
-| CRDT | Eventually consistent | Very complex |
+| Approach | Pros | Cons | Our Choice |
+|----------|------|------|------------|
+| **Full State Broadcast** | Simple, always consistent | More bandwidth | ✅ Selected |
+| **Operational Transform** | Less bandwidth | Very complex | ❌ |
+| **CRDT** | Eventually consistent | Extremely complex | ❌ |
+
+For a real-time collaborative canvas with < 100 users per room, full state broadcast is the pragmatic choice.
+
+---
+
+## 🏠 Room Architecture
+
+### Data Structure
+
+```typescript
+interface RoomState {
+  strokes: Stroke[];
+  shapes: Shape[];
+  textElements: TextElement[];
+  redoStack: (Stroke | Shape | TextElement)[][];
+  users: Map<string, User>;
+  activeStrokes: Map<string, Stroke>;  // In-progress strokes
+}
+
+// Server state
+const rooms: Map<string, RoomState> = new Map();
+const userRooms: Map<string, string> = new Map();  // socketId → roomId
+```
+
+### Room Lifecycle
+
+```
+┌──────────────┐
+│   Creation   │
+│              │
+│ First user   │
+│ joins room   │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐     ┌──────────────┐
+│   Active     │────>│  User Joins  │
+│              │     │              │
+│ Users drawing│     │ Send state   │
+│ & collaborat.│<────│ Broadcast    │
+└──────┬───────┘     └──────────────┘
+       │
+       ▼
+┌──────────────┐
+│  User Leaves │
+│              │
+│ Remove user  │
+│ Broadcast    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│   Cleanup    │
+│              │
+│ If room empty│
+│ (not default)│
+│ Delete room  │
+└──────────────┘
+```
+
+### Room Isolation
+
+Each room maintains completely independent state:
+
+```typescript
+socket.on('stroke:start', (data) => {
+  const roomId = userRooms.get(socket.id);
+  const room = rooms.get(roomId);
+
+  // All operations scoped to room
+  room.strokes.push(newStroke);
+
+  // Broadcast only to users in same room
+  socket.to(roomId).emit('stroke:broadcast', { stroke: newStroke });
+});
+```
 
 ---
 
 ## ⚡ Performance Optimizations
 
-### 1. Event Throttling
+### 1. Cursor Throttling (60 FPS)
 
 ```typescript
-// Cursor updates throttled to 60fps (16ms)
 private cursorThrottleTimer: number | null = null;
-private readonly CURSOR_THROTTLE_MS = 16;
+private readonly CURSOR_THROTTLE_MS = 16;  // ~60 FPS
 
-if (this.cursorThrottleTimer === null) {
-  this.cursorThrottleTimer = window.setTimeout(() => {
-    this.callbacks.onCursorMove?.({ x, y });
-    this.cursorThrottleTimer = null;
-  }, this.CURSOR_THROTTLE_MS);
+handleCursorMove(x: number, y: number): void {
+  if (this.cursorThrottleTimer === null) {
+    this.cursorThrottleTimer = window.setTimeout(() => {
+      this.socket.emit('cursor:move', { x, y });
+      this.cursorThrottleTimer = null;
+    }, this.CURSOR_THROTTLE_MS);
+  }
 }
 ```
 
-### 2. Point Smoothing
+### 2. Point Smoothing (Exponential Moving Average)
 
 ```typescript
-// Exponential moving average for smoother lines
-private smoothPoint(point: Point): Point {
-  const last = this.pointBuffer[this.pointBuffer.length - 1];
+private smoothPoint(point: Point, lastPoint: Point): Point {
+  const smoothingFactor = 0.3;
   return {
-    x: last.x + (point.x - last.x) * 0.3,
-    y: last.y + (point.y - last.y) * 0.3
+    x: lastPoint.x + (point.x - lastPoint.x) * smoothingFactor,
+    y: lastPoint.y + (point.y - lastPoint.y) * smoothingFactor
   };
 }
 ```
 
-### 3. Efficient Canvas Rendering
-
-- **DPR Scaling**: Canvas scaled by `devicePixelRatio` for crisp lines
-- **Line Properties**: `lineCap='round'`, `lineJoin='round'` for smooth corners
-- **Incremental Drawing**: Only draw new points, not full redraw
-- **Batch Redraw**: `redrawAll()` only on undo/redo/state sync
-
-### 4. WebSocket Optimization
-
-- **Binary Transport**: Socket.io uses WebSocket transport when available
-- **Reconnection**: Exponential backoff (1s → 5s max)
-- **Offline Queue**: Strokes queued when disconnected, flushed on reconnect
-
-### 5. FPS & Latency Monitoring
-
-Real-time performance metrics displayed in a panel (bottom-right):
+### 3. Device Pixel Ratio Scaling
 
 ```typescript
-// FPS tracking using requestAnimationFrame
-private startPerformanceMonitoring(): void {
-  const updatePerformance = () => {
-    this.perfStats.frameCount++;
-    const elapsed = performance.now() - this.perfStats.lastFpsUpdate;
-    
-    if (elapsed >= 500) {
-      this.perfStats.fps = Math.round((this.perfStats.frameCount * 1000) / elapsed);
-      this.perfStats.frameCount = 0;
-      this.perfStats.lastFpsUpdate = performance.now();
-    }
-    
-    requestAnimationFrame(updatePerformance);
-  };
-  requestAnimationFrame(updatePerformance);
+setupCanvas(): void {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = this.canvas.getBoundingClientRect();
+
+  this.canvas.width = rect.width * dpr;
+  this.canvas.height = rect.height * dpr;
+
+  this.ctx.scale(dpr, dpr);
+  this.canvas.style.width = `${rect.width}px`;
+  this.canvas.style.height = `${rect.height}px`;
+}
+```
+
+### 4. Incremental Drawing
+
+```typescript
+// GOOD: Only draw new points
+drawStrokePoint(strokeId: string, point: Point): void {
+  const stroke = this.activeStrokes.get(strokeId);
+  const lastPoint = stroke.points[stroke.points.length - 1];
+
+  this.ctx.beginPath();
+  this.ctx.moveTo(lastPoint.x, lastPoint.y);
+  this.ctx.lineTo(point.x, point.y);
+  this.ctx.stroke();
+
+  stroke.points.push(point);
 }
 
-// Latency measurement via ping/pong
-socket.on('ping', () => {
-  this.pingStartTime = Date.now();
-  socket.emit('ping');
-});
-socket.on('pong', () => {
-  this.latency = Date.now() - this.pingStartTime;
+// BAD: Full redraw on every point (avoided)
+// redrawAll() on every mousemove - too expensive!
+```
+
+### 5. WebSocket Transport Optimization
+
+```typescript
+const io = new Server(httpServer, {
+  transports: ['websocket', 'polling'],  // Prefer WebSocket
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  // Binary data for efficiency
+  parser: require('socket.io-msgpack-parser')
 });
 ```
 
-**Metrics Displayed:**
-| Metric | Color Coding |
-|--------|-------------|
-| FPS | Green (≥55), Orange (30-54), Red (<30) |
-| Latency | Green (<50ms), Orange (50-150ms), Red (>150ms) |
-| Strokes | Total count of strokes + shapes |
+---
+
+## 🔒 Input Validation & Security
+
+### Server-Side Validation
+
+All incoming data is validated before processing:
+
+```typescript
+function isValidPoint(data: unknown): data is Point {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as any).x === 'number' &&
+    typeof (data as any).y === 'number' &&
+    isFinite((data as any).x) &&
+    isFinite((data as any).y) &&
+    (data as any).x >= -10000 &&
+    (data as any).x <= 10000 &&
+    (data as any).y >= -10000 &&
+    (data as any).y <= 10000
+  );
+}
+
+function isValidStrokeStart(data: unknown): boolean {
+  if (typeof data !== 'object' || data === null) return false;
+
+  const d = data as any;
+  return (
+    typeof d.strokeId === 'string' &&
+    d.strokeId.length > 0 &&
+    d.strokeId.length < 50 &&
+    /^#[0-9A-Fa-f]{6}$/.test(d.color) &&
+    typeof d.width === 'number' &&
+    d.width >= 1 &&
+    d.width <= 50 &&
+    (d.tool === 'brush' || d.tool === 'eraser')
+  );
+}
+
+function isValidUsername(name: string): boolean {
+  return (
+    typeof name === 'string' &&
+    name.length >= 1 &&
+    name.length <= 30 &&
+    /^[a-zA-Z0-9\s\-_]+$/.test(name)
+  );
+}
+```
+
+### Validation Error Handling
+
+```typescript
+socket.on('stroke:start', (data) => {
+  if (!isValidStrokeStart(data)) {
+    socket.emit('error', { message: 'Invalid stroke data' });
+    return;
+  }
+  // Process valid data...
+});
+```
+
+### Resource Limits
+
+| Resource | Limit | Enforcement |
+|----------|-------|-------------|
+| Strokes per Room | 5,000 | Reject new strokes when full |
+| Shapes per Room | 1,000 | Reject new shapes when full |
+| Text Elements | 500 | Reject new text when full |
+| Points per Stroke | 10,000 | Truncate stroke |
+| Undo Stack | 50 | FIFO (oldest removed) |
+| Coordinate Range | ±10,000 | Validate on receive |
+| Stroke Width | 1-50 | Clamp to range |
 
 ---
 
@@ -358,10 +808,11 @@ When multiple users draw simultaneously on overlapping areas:
 ```
 User A draws:  ████████████
 User B draws:      ████████████
+
 Result:        ████████████████  (Both visible, layered by timestamp)
 ```
 
-**Strategy**: Last-write-wins with timestamp ordering
+**Strategy:** Last-write-wins with timestamp ordering
 - All strokes are preserved
 - Rendering order determined by `timestamp`
 - No conflicts because strokes don't modify each other
@@ -377,89 +828,77 @@ Server handles sequentially:
 2. Process User B's undo → broadcast state
 ```
 
-**Strategy**: Server serializes all undo operations
+**Strategy:** Server serializes all undo operations
 - Only one undo processed at a time
 - Each undo triggers full state broadcast
 - All clients converge to same state
 
 ---
 
-## 🏗️ Room Architecture
-
-### Room Isolation
-
-```typescript
-interface RoomState {
-  strokes: Stroke[];
-  shapes: Shape[];
-  textElements: TextElement[];
-  undoStack: (Stroke | Shape | TextElement)[][];
-  redoStack: (Stroke | Shape | TextElement)[][];
-  users: Map<string, User>;
-  activeStrokes: Map<string, Stroke>;
-}
-
-const rooms: Map<string, RoomState> = new Map();
-const userRooms: Map<string, string> = new Map(); // socketId → roomId
-```
-
-### Room Lifecycle
-
-1. **Creation**: Room created when first user joins (or on demand)
-2. **Joining**: User added to room, receives full state
-3. **Broadcasting**: Events only sent to users in same room
-4. **Cleanup**: Empty rooms (except 'default') are deleted
-
----
-
 ## 📈 Scalability Considerations
 
-### Current Limits
+### Current Architecture (Single Server)
 
-| Resource | Limit | Reason |
-|----------|-------|--------|
-| Max Strokes per Room | 5,000 | Memory management |
-| Max Shapes per Room | 1,000 | Memory management |
-| Max Text Elements | 500 | Memory management |
-| Max Points per Stroke | 10,000 | Prevent abuse |
-| Max Undo Stack | 50 | Memory management |
+```
+┌─────────────────┐
+│   Load Balancer │  (Optional)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Node.js Server │  ← Single instance
+│                 │
+│  • All rooms    │
+│  • All users    │
+│  • All state    │
+└─────────────────┘
+```
 
-### Scaling to 1000+ Users
+**Limits:**
+- ~1,000 concurrent connections per server
+- ~50 rooms with active drawing
+- Memory bound (all state in RAM)
+
+### Scaling to 10,000+ Users
 
 For production at scale, consider:
 
-1. **Redis Pub/Sub**: Share state across multiple server instances
-2. **Room Sharding**: Distribute rooms across servers
-3. **Event Batching**: Aggregate stroke moves (every 50ms instead of every move)
-4. **Delta Sync**: Send only changes, not full state
-5. **Canvas Snapshots**: Periodically save canvas as image, reduce stroke history
-
----
-
-## 🔒 Input Validation
-
-### Server-Side Validation
-
-```typescript
-function isValidPoint(data: any): boolean {
-  return typeof data === 'object' &&
-         typeof data.x === 'number' &&
-         typeof data.y === 'number' &&
-         isFinite(data.x) && isFinite(data.y) &&
-         data.x >= -10000 && data.x <= 10000 &&
-         data.y >= -10000 && data.y <= 10000;
-}
-
-function isValidStrokeStart(data: any): boolean {
-  return typeof data === 'object' &&
-         typeof data.strokeId === 'string' &&
-         data.strokeId.length > 0 &&
-         data.strokeId.length < 50 &&
-         /^#[0-9A-Fa-f]{6}$/.test(data.color) &&
-         data.width >= 1 && data.width <= 50 &&
-         (data.tool === 'brush' || data.tool === 'eraser');
-}
 ```
+┌─────────────────┐
+│   Load Balancer │
+│  (Sticky Sessions)
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐ ┌───────┐
+│Server1│ │Server2│  ← Multiple instances
+└───┬───┘ └───┬───┘
+    │         │
+    └────┬────┘
+         │
+         ▼
+┌─────────────────┐
+│  Redis Pub/Sub  │  ← Shared state
+│  + Redis Cache  │
+└─────────────────┘
+```
+
+**Requirements:**
+1. **Redis Pub/Sub** - Share events across server instances
+2. **Room Sharding** - Distribute rooms across servers
+3. **Sticky Sessions** - Route same user to same server
+4. **Redis Cache** - Share room state
+
+### Future Optimizations
+
+| Optimization | Benefit |
+|--------------|---------|
+| Event Batching | Reduce network calls |
+| Delta Sync | Send only changes |
+| Canvas Snapshots | Reduce stroke history |
+| Worker Threads | Offload processing |
 
 ---
 
@@ -467,76 +906,165 @@ function isValidStrokeStart(data: any): boolean {
 
 ```
 collaborative-canvas/
-├── client/
-│   ├── index.html          # Main HTML structure
-│   ├── style.css           # Styling
-│   └── src/
-│       ├── main.ts         # App orchestrator (531 lines)
-│       ├── canvas.ts       # Drawing engine (778 lines)
-│       ├── ui.ts           # Toolbar & shortcuts (359 lines)
-│       ├── websocket.ts    # Socket.io client (374 lines)
-│       └── utils.ts        # Utilities
-├── server/
-│   ├── server.ts           # Express + Socket.io (587 lines)
-│   └── production.ts       # Production bundle
-├── shared/
-│   └── types.ts            # TypeScript interfaces (134 lines)
-├── package.json
-├── tsconfig.json
-├── Dockerfile
-├── docker-compose.yml
-├── README.md
-└── ARCHITECTURE.md         # This file
+│
+├── 📂 client/                     # Frontend Application
+│   ├── index.html                 # Main canvas page
+│   ├── landing.html               # Marketing landing page
+│   ├── style.css                  # Canvas styles (1300+ lines)
+│   ├── landing.css                # Landing page styles (900+ lines)
+│   │
+│   └── 📂 src/
+│       ├── main.ts                # App orchestrator (600+ lines)
+│       │                          # - Initialization
+│       │                          # - Event binding
+│       │                          # - Export functions
+│       │
+│       ├── canvas.ts              # Drawing engine (800+ lines)
+│       │                          # - Raw Canvas API
+│       │                          # - DPR scaling
+│       │                          # - Point smoothing
+│       │                          # - Shape rendering
+│       │
+│       ├── ui.ts                  # UI management (400+ lines)
+│       │                          # - Toolbar setup
+│       │                          # - Menu dropdown
+│       │                          # - Help panel
+│       │                          # - Keyboard shortcuts
+│       │
+│       ├── websocket.ts           # Socket.io client (400+ lines)
+│       │                          # - Connection management
+│       │                          # - Event handlers
+│       │                          # - Reconnection logic
+│       │
+│       └── utils.ts               # Utilities
+│                                  # - Color generation
+│                                  # - ID generation
+│
+├── 📂 server/                     # Backend Application
+│   ├── server.ts                  # Development server (600+ lines)
+│   │                              # - Express setup
+│   │                              # - Socket.io handlers
+│   │                              # - Room management
+│   │
+│   ├── production.ts              # Production server (650+ lines)
+│   │                              # - Optimized for deployment
+│   │                              # - Static file serving
+│   │
+│   ├── rooms.ts                   # Room management
+│   └── drawing-state.ts           # State management
+│
+├── 📂 shared/                     # Shared Code
+│   └── types.ts                   # TypeScript interfaces (150+ lines)
+│                                  # - Stroke, Shape, TextElement
+│                                  # - User, Room
+│                                  # - Socket events
+│
+├── 📂 dist/                       # Built client (production)
+├── 📂 dist-server/                # Built server (production)
+│
+├── 📄 package.json                # Dependencies & scripts
+├── 📄 tsconfig.json               # TypeScript config (client)
+├── 📄 tsconfig.server.json        # TypeScript config (server)
+├── 📄 vite.config.ts              # Vite configuration
+├── 📄 Dockerfile                  # Multi-stage Docker build
+├── 📄 docker-compose.yml          # Docker Compose
+├── 📄 README.md                   # User documentation
+└── 📄 ARCHITECTURE.md             # This file
 ```
 
 ---
 
-## 🧪 Testing Instructions
+## 🧪 Testing Guide
 
-### Manual Testing (Two Browser Windows)
+### Manual Testing Checklist
 
-1. Start the server:
-   ```bash
-   npm install
-   npm run dev
-   ```
+#### 1. Basic Drawing
+- [ ] Open app in browser
+- [ ] Draw with brush tool
+- [ ] Change colors (8 presets + custom)
+- [ ] Change stroke width (8 sizes)
+- [ ] Use eraser tool
+- [ ] Undo/Redo works
 
-2. Open two browser windows at `http://localhost:5173`
+#### 2. Real-Time Sync (2 Windows)
+- [ ] Open app in 2 browser windows
+- [ ] Draw in Window A → appears in Window B
+- [ ] Ghost cursor visible in other window
+- [ ] User list shows both users
+- [ ] Press Ctrl+Z in B → undoes A's last stroke
 
-3. Test real-time drawing:
-   - Draw in Window A → appears in Window B immediately
-   - Move cursor in Window A → ghost cursor appears in Window B
+#### 3. Shapes & Text
+- [ ] Draw rectangle with R key
+- [ ] Draw circle with C key
+- [ ] Draw line with L key
+- [ ] Toggle fill with F key
+- [ ] Add text with T key
 
-4. Test global undo:
-   - Draw stroke in Window A
-   - Draw stroke in Window B
-   - Press Ctrl+Z in Window A → removes Window B's last stroke
+#### 4. Room Collaboration
+- [ ] Create new room (menu button)
+- [ ] Copy room URL
+- [ ] Open URL in incognito window
+- [ ] Both users in same isolated room
+- [ ] Default room unaffected
 
-5. Test rooms:
-   - Click "New Room" in Window A
-   - Copy URL and paste in Window B
-   - Both users now in isolated room
+#### 5. Export
+- [ ] Export as PNG (downloads correctly)
+- [ ] Export as SVG (downloads correctly)
+- [ ] Clear canvas works
+
+#### 6. Mobile Responsiveness
+- [ ] Open in mobile view (DevTools)
+- [ ] Toolbar at bottom of screen
+- [ ] Touch drawing works
+- [ ] Menu opens correctly
+- [ ] All tools accessible
+
+### Automated Testing (Future)
+
+```bash
+# Unit tests (not yet implemented)
+npm run test
+
+# E2E tests with Playwright (not yet implemented)
+npm run test:e2e
+```
 
 ---
 
-## 📊 Time Spent
+## 📊 Development Timeline
 
-| Phase | Time |
-|-------|------|
-| Phase 1: Basic Canvas | 2-3 hours |
-| Phase 2: WebSocket Sync | 3-4 hours |
-| Phase 3: Error Handling | 2-3 hours |
-| Phase 4: Docker/Production | 2 hours |
-| Phase 5: Advanced Features | 3-4 hours |
-| Documentation | 1-2 hours |
-| **Total** | **13-18 hours** |
+| Phase | Duration | Deliverables |
+|-------|----------|--------------|
+| **Phase 1** | 2-3 hours | Basic canvas, brush, eraser, colors, local undo |
+| **Phase 2** | 3-4 hours | WebSocket sync, ghost cursors, user presence |
+| **Phase 3** | 2-3 hours | Error handling, reconnection, offline queue |
+| **Phase 4** | 2 hours | Docker, production build, deployment |
+| **Phase 5** | 3-4 hours | Shapes, text, rooms, export, FPS display |
+| **Phase 6** | 2-3 hours | Excalidraw UI, mobile responsive |
+| **Docs** | 1-2 hours | README, Architecture documentation |
+| **Total** | **~18 hours** | Full-featured collaborative canvas |
 
 ---
 
 ## 🔮 Future Improvements
 
-1. **Persistence**: Save drawings to database
-2. **Layers**: Separate layers for each user
-3. **Selection Tool**: Select and move drawn elements
-4. **Pressure Sensitivity**: For stylus support
-5. **Performance Dashboard**: FPS counter, latency display
+| Feature | Priority | Complexity |
+|---------|----------|------------|
+| Database Persistence | High | Medium |
+| User Authentication | Medium | Medium |
+| Selection Tool | High | High |
+| Layers | Medium | High |
+| Image Upload | Medium | Medium |
+| Pressure Sensitivity | Low | Medium |
+| Mobile App | Low | High |
+| Real-time Voice Chat | Low | High |
+
+---
+
+<div align="center">
+
+**Built with ❤️ for Flam Assignment**
+
+[📖 Back to README](README.md) • [🚀 Live Demo](https://real-time-collaborative-drawing-canvas-rqd8.onrender.com/)
+
+</div>
