@@ -303,7 +303,7 @@ io.on("connection", (socket) => {
       if (!data?.shape) return;
       const roomState2 = getUserRoom(socket.id);
       const roomId = userRooms.get(socket.id) || DEFAULT_ROOM;
-      const shape = { ...data.shape, userId: socket.id };
+      const shape = { ...data.shape, userId: socket.id, timestamp: Date.now() };
       if (roomState2.shapes.length >= MAX_SHAPES) {
         roomState2.shapes.shift();
       }
@@ -319,7 +319,7 @@ io.on("connection", (socket) => {
       if (!data?.text) return;
       const roomState2 = getUserRoom(socket.id);
       const roomId = userRooms.get(socket.id) || DEFAULT_ROOM;
-      const text = { ...data.text, userId: socket.id };
+      const text = { ...data.text, userId: socket.id, timestamp: Date.now() };
       if (roomState2.textElements.length >= MAX_TEXT) {
         roomState2.textElements.shift();
       }
@@ -376,11 +376,11 @@ io.on("connection", (socket) => {
       const redoItems = roomState2.redoStack.pop();
       if (redoItems) {
         for (const item of redoItems) {
-          if ("points" in item) {
+          if ("points" in item && Array.isArray(item.points)) {
             roomState2.strokes.push(item);
-          } else if ("type" in item) {
+          } else if ("startPoint" in item && "endPoint" in item) {
             roomState2.shapes.push(item);
-          } else if ("text" in item) {
+          } else if ("text" in item && "position" in item) {
             roomState2.textElements.push(item);
           }
         }

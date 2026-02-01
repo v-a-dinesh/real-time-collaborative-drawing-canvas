@@ -376,7 +376,8 @@ io.on('connection', (socket: Socket) => {
       const roomState = getUserRoom(socket.id);
       const roomId = userRooms.get(socket.id) || DEFAULT_ROOM;
       
-      const shape = { ...data.shape, userId: socket.id };
+      // Server sets timestamp to prevent client manipulation
+      const shape = { ...data.shape, userId: socket.id, timestamp: Date.now() };
       
       if (roomState.shapes.length >= MAX_SHAPES) {
         roomState.shapes.shift();
@@ -402,7 +403,8 @@ io.on('connection', (socket: Socket) => {
       const roomState = getUserRoom(socket.id);
       const roomId = userRooms.get(socket.id) || DEFAULT_ROOM;
       
-      const text = { ...data.text, userId: socket.id };
+      // Server sets timestamp to prevent client manipulation
+      const text = { ...data.text, userId: socket.id, timestamp: Date.now() };
       
       if (roomState.textElements.length >= MAX_TEXT) {
         roomState.textElements.shift();
@@ -477,11 +479,12 @@ io.on('connection', (socket: Socket) => {
       const redoItems = roomState.redoStack.pop();
       if (redoItems) {
         for (const item of redoItems) {
-          if ('points' in item) {
+          // Type detection: strokes have 'points', shapes have 'startPoint', text has 'text'
+          if ('points' in item && Array.isArray((item as Stroke).points)) {
             roomState.strokes.push(item as Stroke);
-          } else if ('type' in item) {
+          } else if ('startPoint' in item && 'endPoint' in item) {
             roomState.shapes.push(item as Shape);
-          } else if ('text' in item) {
+          } else if ('text' in item && 'position' in item) {
             roomState.textElements.push(item as TextElement);
           }
         }
