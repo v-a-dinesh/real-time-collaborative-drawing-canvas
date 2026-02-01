@@ -414,12 +414,14 @@ class App {
       this.currentUsers = users;
       this.currentUser = currentUser;
       this.updateUsersList();
+      this.ui.updateUserCount(users.length);
     });
 
     this.ws.onUserJoined((user) => {
       console.log('User joined:', user.name);
       this.currentUsers.push(user);
       this.updateUsersList();
+      this.ui.updateUserCount(this.currentUsers.length);
       this.showNotification(`${user.name} joined`, 'info');
     });
 
@@ -427,6 +429,7 @@ class App {
       console.log('User left:', userId);
       this.currentUsers = this.currentUsers.filter(u => u.id !== userId);
       this.updateUsersList();
+      this.ui.updateUserCount(this.currentUsers.length);
       this.removeGhostCursor(userId);
     });
 

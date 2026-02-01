@@ -2,24 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Collaborative Canvas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flamdraw - Canvas</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Virgil&family=Inter:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Username Modal -->
   <div id="username-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-icon">🎨</div>
-        <h1>Welcome to Collaborative Canvas</h1>
-        <p>Draw, create, and collaborate in real-time with others</p>
+        <div class="modal-logo">
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+            <rect x="2" y="2" width="28" height="28" rx="6" fill="#6366F1"/>
+            <path d="M10 22L14 10L18 18L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="10" cy="22" r="2" fill="white"/>
+            <circle cx="22" cy="12" r="2" fill="white"/>
+          </svg>
+        </div>
+        <h1>Welcome to Flamdraw</h1>
+        <p>Create, collaborate, and share your ideas in real-time</p>
       </div>
       <div class="modal-body">
-        <label for="username-input">Choose your display name</label>
+        <label for="username-input">Your display name</label>
         <input 
           type="text" 
           id="username-input" 
@@ -28,14 +35,14 @@
           autocomplete="off"
           autofocus
         >
-        <span class="input-hint">This will be visible to other collaborators</span>
+        <span class="input-hint">Visible to other collaborators in the room</span>
       </div>
       <div class="modal-footer">
         <button id="join-btn" class="btn-primary">
-          <span>Join Canvas</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
           </svg>
+          <span>Start Drawing</span>
         </button>
       </div>
     </div>
@@ -45,138 +52,282 @@
   <div id="toast-container"></div>
 
   <div id="app" class="hidden">
-    <!-- Room Bar -->
-    <div class="room-bar">
-      <div class="room-info">
-        <span class="room-label">Room:</span>
-        <span id="room-id" class="room-id">default</span>
-        <button id="copy-room-btn" class="room-btn" title="Copy room link">📋</button>
-      </div>
-      <div class="room-controls">
-        <input type="text" id="room-input" placeholder="Enter room ID" class="room-input">
-        <button id="join-room-btn" class="room-btn primary">Join</button>
-        <button id="create-room-btn" class="room-btn">New Room</button>
+    <!-- Hamburger Menu (Top Left) -->
+    <div class="menu-container">
+      <button id="menu-toggle" class="menu-btn" title="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+      </button>
+      
+      <div id="menu-dropdown" class="menu-dropdown hidden">
+        <div class="menu-header">
+          <div class="menu-logo">
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+              <rect x="2" y="2" width="28" height="28" rx="6" fill="#6366F1"/>
+              <path d="M10 22L14 10L18 18L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="10" cy="22" r="2" fill="white"/>
+              <circle cx="22" cy="12" r="2" fill="white"/>
+            </svg>
+          </div>
+          <span class="menu-brand">FLAMDRAW</span>
+        </div>
+        
+        <div class="menu-section">
+          <button id="menu-export-png" class="menu-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+            <span>Export as PNG</span>
+            <span class="menu-shortcut">Ctrl+Shift+E</span>
+          </button>
+          <button id="menu-export-svg" class="menu-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+            <span>Export as SVG</span>
+          </button>
+        </div>
+        
+        <div class="menu-divider"></div>
+        
+        <div class="menu-section">
+          <button id="menu-clear" class="menu-item danger">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+            </svg>
+            <span>Reset canvas</span>
+          </button>
+        </div>
+        
+        <div class="menu-divider"></div>
+        
+        <div class="menu-section">
+          <a href="landing.html" class="menu-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            <span>Back to Home</span>
+          </a>
+          <a href="https://github.com/v-a-dinesh/real-time-collaborative-drawing-canvas" target="_blank" class="menu-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <span>GitHub</span>
+          </a>
+        </div>
       </div>
     </div>
 
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <!-- Drawing Tools -->
-      <div class="tool-group">
-        <button id="brush-btn" class="tool-btn active" title="Brush (B)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/>
-          </svg>
-        </button>
-        <button id="eraser-btn" class="tool-btn" title="Eraser (E)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zm-1.41 1.42L6.93 12.87 11.13 17.07l7.89-7.89-4.19-4.2z"/>
-          </svg>
-        </button>
-      </div>
+    <!-- Central Floating Toolbar -->
+    <div class="floating-toolbar">
+      <!-- Brush -->
+      <button id="brush-btn" class="toolbar-btn active" title="Brush (B)" data-tool="brush">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/>
+        </svg>
+        <span class="toolbar-key">1</span>
+      </button>
 
-      <div class="divider"></div>
+      <button id="rect-btn" class="toolbar-btn" title="Rectangle (R)" data-tool="rect">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+        </svg>
+        <span class="toolbar-key">2</span>
+      </button>
 
-      <!-- Shape Tools -->
-      <div class="tool-group">
-        <button id="rect-btn" class="tool-btn" title="Rectangle (R)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 5v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2zm16 14H5V5h14v14z"/>
-          </svg>
-        </button>
-        <button id="circle-btn" class="tool-btn" title="Circle (C)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
-          </svg>
-        </button>
-        <button id="line-btn" class="tool-btn" title="Line (L)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.71 4.29l-1.42-1.42L3.71 17.46l1.42 1.42L19.71 4.29z" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </button>
-        <button id="text-btn" class="tool-btn" title="Text (T)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5 4v3h5.5v12h3V7H19V4z"/>
-          </svg>
-        </button>
-        <label class="fill-toggle" title="Fill shapes">
-          <input type="checkbox" id="fill-toggle">
-          <span class="fill-icon">◼</span>
-        </label>
-      </div>
+      <button id="circle-btn" class="toolbar-btn" title="Ellipse (O)" data-tool="circle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+        </svg>
+        <span class="toolbar-key">3</span>
+      </button>
 
-      <div class="divider"></div>
+      <button id="line-btn" class="toolbar-btn" title="Line (L)" data-tool="line">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="19" x2="19" y2="5"/>
+        </svg>
+        <span class="toolbar-key">4</span>
+      </button>
 
-      <!-- Colors -->
-      <div class="tool-group colors">
-        <input type="color" id="color-picker" value="#000000" title="Pick color">
-        <div class="color-presets">
-          <button class="color-preset active" data-color="#000000" style="background:#000000"></button>
-          <button class="color-preset" data-color="#FF0000" style="background:#FF0000"></button>
-          <button class="color-preset" data-color="#00FF00" style="background:#00FF00"></button>
-          <button class="color-preset" data-color="#0000FF" style="background:#0000FF"></button>
-          <button class="color-preset" data-color="#FFFF00" style="background:#FFFF00"></button>
-          <button class="color-preset" data-color="#FF00FF" style="background:#FF00FF"></button>
-          <button class="color-preset" data-color="#00FFFF" style="background:#00FFFF"></button>
-          <button class="color-preset" data-color="#FFA500" style="background:#FFA500"></button>
+      <button id="text-btn" class="toolbar-btn" title="Text (T)" data-tool="text">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M5 4v3h5.5v12h3V7H19V4z"/>
+        </svg>
+        <span class="toolbar-key">5</span>
+      </button>
+
+      <button id="eraser-btn" class="toolbar-btn" title="Eraser (E)" data-tool="eraser">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zm-1.41 1.42L6.93 12.87l4.2 4.2 7.89-7.89-4.19-4.2z"/>
+        </svg>
+        <span class="toolbar-key">6</span>
+      </button>
+    </div>
+
+    <!-- Properties Panel (Below toolbar) -->
+    <div id="properties-panel" class="properties-panel">
+      <!-- Stroke Color -->
+      <div class="prop-group">
+        <label>Stroke</label>
+        <div class="color-options">
+          <button class="color-btn active" data-color="#1e1e1e" style="background: #1e1e1e;"></button>
+          <button class="color-btn" data-color="#e03131" style="background: #e03131;"></button>
+          <button class="color-btn" data-color="#2f9e44" style="background: #2f9e44;"></button>
+          <button class="color-btn" data-color="#1971c2" style="background: #1971c2;"></button>
+          <button class="color-btn" data-color="#f08c00" style="background: #f08c00;"></button>
+          <button class="color-btn" data-color="#9c36b5" style="background: #9c36b5;"></button>
+          <input type="color" id="color-picker" value="#1e1e1e" class="color-picker-input" title="Custom color">
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Stroke Width -->
-      <div class="tool-group stroke-width">
-        <label>Size:</label>
-        <input type="range" id="stroke-width" min="1" max="50" value="5">
-        <span id="stroke-value">5px</span>
+      <!-- Fill Toggle (for shapes) -->
+      <div class="prop-group" id="fill-group">
+        <label>Fill</label>
+        <div class="fill-options">
+          <button class="fill-btn active" data-fill="transparent" title="No fill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="8"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          <button class="fill-btn" data-fill="solid" title="Solid fill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="8"/>
+            </svg>
+          </button>
+        </div>
+        <input type="checkbox" id="fill-toggle" hidden>
       </div>
 
-      <div class="divider"></div>
+      <!-- Stroke Width - 8 Options -->
+      <div class="prop-group">
+        <label>Size</label>
+        <div class="stroke-options">
+          <button class="stroke-btn" data-width="1" title="Extra thin (1px)">
+            <div class="stroke-preview" style="height: 1px;"></div>
+          </button>
+          <button class="stroke-btn" data-width="2" title="Thin (2px)">
+            <div class="stroke-preview" style="height: 2px;"></div>
+          </button>
+          <button class="stroke-btn active" data-width="4" title="Regular (4px)">
+            <div class="stroke-preview" style="height: 3px;"></div>
+          </button>
+          <button class="stroke-btn" data-width="8" title="Bold (8px)">
+            <div class="stroke-preview" style="height: 5px;"></div>
+          </button>
+          <button class="stroke-btn" data-width="12" title="Extra bold (12px)">
+            <div class="stroke-preview" style="height: 7px;"></div>
+          </button>
+          <button class="stroke-btn" data-width="20" title="Thick (20px)">
+            <div class="stroke-preview" style="height: 10px;"></div>
+          </button>
+          <button class="stroke-btn" data-width="32" title="Very thick (32px)">
+            <div class="stroke-preview" style="height: 14px;"></div>
+          </button>
+          <button class="stroke-btn" data-width="50" title="Maximum (50px)">
+            <div class="stroke-preview" style="height: 18px;"></div>
+          </button>
+        </div>
+        <input type="range" id="stroke-width" min="1" max="50" value="4" hidden>
+      </div>
+    </div>
 
-      <!-- Actions -->
-      <div class="tool-group actions">
-        <button id="undo-btn" class="action-btn" title="Undo (Ctrl+Z)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+    <!-- Room Panel (Top Right) -->
+    <div class="room-panel">
+      <div class="room-info-row">
+        <div class="room-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
           </svg>
-        </button>
-        <button id="redo-btn" class="action-btn" title="Redo (Ctrl+Shift+Z)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/>
-          </svg>
-        </button>
-        <button id="clear-btn" class="action-btn danger" title="Clear Canvas">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+          <span id="user-count">1</span>
+        </div>
+        <span class="room-label">Room:</span>
+        <span id="room-id" class="room-id">default</span>
+        <button id="copy-room-btn" class="icon-btn" title="Copy room link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
           </svg>
         </button>
       </div>
-
-      <div class="divider"></div>
-
-      <!-- Export -->
-      <div class="tool-group export-group">
-        <button id="export-png-btn" class="action-btn" title="Export PNG">
-          PNG
-        </button>
-        <button id="export-svg-btn" class="action-btn" title="Export SVG">
-          SVG
-        </button>
-      </div>
-
-      <!-- Keyboard Hints -->
-      <div class="keyboard-hints">
-        <span>B: Brush</span>
-        <span>R: Rect</span>
-        <span>C: Circle</span>
-        <span>L: Line</span>
-        <span>T: Text</span>
+      <div class="room-actions">
+        <input type="text" id="room-input" placeholder="Room ID..." class="room-input">
+        <button id="join-room-btn" class="btn-sm primary">Join</button>
+        <button id="create-room-btn" class="btn-sm">New</button>
       </div>
     </div>
 
     <!-- Canvas Container -->
     <div class="canvas-container">
       <canvas id="canvas"></canvas>
+      
+      <!-- Watermark -->
+      <div class="canvas-watermark">
+        <svg class="watermark-arrow" width="60" height="40" viewBox="0 0 60 40">
+          <path d="M5 35 Q 30 5, 50 20" stroke="#aaa" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="4,4"/>
+          <path d="M45 15 L50 20 L43 23" stroke="#aaa" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="watermark-text">Pick a tool &amp; start drawing!</span>
+      </div>
+    </div>
+
+    <!-- Bottom Left: Zoom & Undo/Redo -->
+    <div class="zoom-controls">
+      <button id="zoom-out-btn" class="zoom-btn" title="Zoom out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 13H5v-2h14v2z"/>
+        </svg>
+      </button>
+      <span id="zoom-level" class="zoom-level">100%</span>
+      <button id="zoom-in-btn" class="zoom-btn" title="Zoom in">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+      </button>
+      <div class="zoom-divider"></div>
+      <button id="undo-btn" class="zoom-btn" title="Undo (Ctrl+Z)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+        </svg>
+      </button>
+      <button id="redo-btn" class="zoom-btn" title="Redo (Ctrl+Shift+Z)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Bottom Right: Help -->
+    <div class="help-panel">
+      <button id="help-btn" class="help-btn" title="Shortcuts &amp; Help">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+        </svg>
+      </button>
+      
+      <!-- Shortcuts Popup -->
+      <div id="shortcuts-popup" class="shortcuts-popup hidden">
+        <div class="shortcuts-header">
+          <h3>Keyboard Shortcuts</h3>
+          <button id="close-shortcuts" class="close-btn">&times;</button>
+        </div>
+        <div class="shortcuts-content">
+          <div class="shortcut-group">
+            <h4>Tools</h4>
+            <div class="shortcut"><span class="key">B</span> Brush</div>
+            <div class="shortcut"><span class="key">E</span> Eraser</div>
+            <div class="shortcut"><span class="key">R</span> Rectangle</div>
+            <div class="shortcut"><span class="key">C</span> Circle</div>
+            <div class="shortcut"><span class="key">L</span> Line</div>
+            <div class="shortcut"><span class="key">T</span> Text</div>
+          </div>
+          <div class="shortcut-group">
+            <h4>Actions</h4>
+            <div class="shortcut"><span class="key">Ctrl+Z</span> Undo</div>
+            <div class="shortcut"><span class="key">Ctrl+Shift+Z</span> Redo</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

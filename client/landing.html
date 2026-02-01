@@ -78,7 +78,20 @@
       <span class="brand-name">FLAMDRAW</span>
     </div>
     
-    <div class="nav-links">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+      <svg class="hamburger-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+      <svg class="close-icon hidden" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+    
+    <div class="nav-links" id="nav-links">
       <a href="#features">Features</a>
       <a href="#how-it-works">How it Works</a>
       <a href="https://github.com/v-a-dinesh/real-time-collaborative-drawing-canvas" target="_blank" class="github-link">
@@ -87,9 +100,13 @@
         </svg>
         <span>GitHub</span>
       </a>
+      <!-- Mobile only CTA -->
+      <a href="index.html" class="btn-primary mobile-cta">
+        <span>Free Whiteboard</span>
+      </a>
     </div>
     
-    <a href="canvas" class="btn-primary nav-cta">
+    <a href="index.html" class="btn-primary nav-cta">
       <span>Free Whiteboard</span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
@@ -110,7 +127,7 @@
       </p>
       
       <div class="hero-cta">
-        <a href="canvas" class="btn-primary btn-large">
+        <a href="index.html" class="btn-primary btn-large">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
           </svg>
@@ -324,7 +341,7 @@
     <div class="cta-content">
       <h2>Ready to collaborate?</h2>
       <p>Start drawing with your team right now. It's free, forever.</p>
-      <a href="canvas" class="btn-primary btn-xlarge">
+      <a href="index.html" class="btn-primary btn-xlarge">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
         </svg>
@@ -392,6 +409,36 @@
           const dy = (y - 0.5) * speed;
           deco.style.transform = `translate(${dx}px, ${dy}px)`;
         });
+      });
+
+      // Mobile Menu Toggle
+      const mobileToggle = document.getElementById('mobile-menu-toggle');
+      const navLinks = document.getElementById('nav-links');
+      const hamburgerIcon = mobileToggle.querySelector('.hamburger-icon');
+      const closeIcon = mobileToggle.querySelector('.close-icon');
+      
+      mobileToggle.addEventListener('click', () => {
+        navLinks.classList.toggle('mobile-open');
+        hamburgerIcon.classList.toggle('hidden');
+        closeIcon.classList.toggle('hidden');
+      });
+
+      // Close menu when clicking a link
+      navLinks.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          navLinks.classList.remove('mobile-open');
+          hamburgerIcon.classList.remove('hidden');
+          closeIcon.classList.add('hidden');
+        });
+      });
+
+      // Close menu when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!navLinks.contains(e.target) && !mobileToggle.contains(e.target)) {
+          navLinks.classList.remove('mobile-open');
+          hamburgerIcon.classList.remove('hidden');
+          closeIcon.classList.add('hidden');
+        }
       });
     });
   </script>

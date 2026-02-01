@@ -131,8 +131,8 @@ export const SOCKET_EVENTS = {
 
 // Default values
 export const DEFAULTS = {
-  COLOR: '#000000',
-  STROKE_WIDTH: 5,
+  COLOR: '#1e1e1e',
+  STROKE_WIDTH: 4,
   TOOL: 'brush' as const,
   FONT_SIZE: 24,
   ROOM_ID: 'default'

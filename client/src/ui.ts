@@ -1,5 +1,5 @@
 /**
- * UI Manager - Toolbar and controls management with shapes and export
+ * UI Manager - Excalidraw-inspired toolbar and controls
  */
 
 import { DEFAULTS, ToolType } from '../../shared/types';
@@ -27,68 +27,148 @@ export class UIManager {
   private isFilled: boolean = false;
 
   constructor() {
-    this.setupToolbar();
-    this.setupKeyboardShortcuts();
+    this.setupFloatingToolbar();
+    this.setupPropertiesPanel();
+    this.setupMenuDropdown();
+    this.setupZoomControls();
+    this.setupHelpPanel();
     this.setupRoomControls();
-    console.log('UIManager initialized with shapes and rooms');
+    this.setupKeyboardShortcuts();
+    this.hideWatermarkOnDraw();
+    console.log('UIManager initialized - Excalidraw-style UI');
   }
 
-  private setupToolbar(): void {
-    // Tool buttons
-    const brushBtn = document.getElementById('brush-btn');
-    const eraserBtn = document.getElementById('eraser-btn');
-    const rectBtn = document.getElementById('rect-btn');
-    const circleBtn = document.getElementById('circle-btn');
-    const lineBtn = document.getElementById('line-btn');
-    const textBtn = document.getElementById('text-btn');
+  private setupFloatingToolbar(): void {
+    // Tool buttons in floating toolbar
+    const toolButtons: { id: string; tool: ToolType }[] = [
+      { id: 'brush-btn', tool: 'brush' },
+      { id: 'eraser-btn', tool: 'eraser' },
+      { id: 'rect-btn', tool: 'rectangle' },
+      { id: 'circle-btn', tool: 'circle' },
+      { id: 'line-btn', tool: 'line' },
+      { id: 'text-btn', tool: 'text' }
+    ];
 
-    brushBtn?.addEventListener('click', () => this.selectTool('brush'));
-    eraserBtn?.addEventListener('click', () => this.selectTool('eraser'));
-    rectBtn?.addEventListener('click', () => this.selectTool('rectangle'));
-    circleBtn?.addEventListener('click', () => this.selectTool('circle'));
-    lineBtn?.addEventListener('click', () => this.selectTool('line'));
-    textBtn?.addEventListener('click', () => this.selectTool('text'));
-
-    // Fill toggle
-    const fillToggle = document.getElementById('fill-toggle') as HTMLInputElement;
-    fillToggle?.addEventListener('change', () => {
-      this.isFilled = fillToggle.checked;
-      this.callbacks.onFillChange?.(this.isFilled);
+    toolButtons.forEach(({ id, tool }) => {
+      const btn = document.getElementById(id);
+      btn?.addEventListener('click', () => this.selectTool(tool));
     });
 
-    // Color picker
-    const colorPicker = document.getElementById('color-picker') as HTMLInputElement;
-    colorPicker?.addEventListener('input', (e) => {
-      const target = e.target as HTMLInputElement;
-      this.currentColor = target.value;
-      this.callbacks.onColorChange?.(target.value);
-      this.updateColorPresets(target.value);
-    });
+    // Arrow button also maps to line
+    const arrowBtn = document.getElementById('arrow-btn');
+    arrowBtn?.addEventListener('click', () => this.selectTool('line'));
 
-    // Color presets
-    const presets = document.querySelectorAll('.color-preset');
-    presets.forEach((preset) => {
-      preset.addEventListener('click', () => {
-        const color = (preset as HTMLElement).dataset.color || '#000000';
-        this.currentColor = color;
-        if (colorPicker) colorPicker.value = color;
-        this.callbacks.onColorChange?.(color);
-        this.updateColorPresets(color);
+    // Set initial active state
+    this.updateToolButtons('brush');
+  }
+
+  private setupPropertiesPanel(): void {
+    // Color buttons
+    const colorBtns = document.querySelectorAll('.color-btn');
+    colorBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const color = (btn as HTMLElement).dataset.color;
+        if (color) {
+          this.currentColor = color;
+          this.callbacks.onColorChange?.(color);
+          this.updateColorButtons(color);
+          
+          // Sync with color picker
+          const colorPicker = document.getElementById('color-picker') as HTMLInputElement;
+          if (colorPicker) colorPicker.value = color;
+        }
       });
     });
 
-    // Stroke width
-    const strokeSlider = document.getElementById('stroke-width') as HTMLInputElement;
-    const strokeValue = document.getElementById('stroke-value');
-
-    strokeSlider?.addEventListener('input', (e) => {
-      const target = e.target as HTMLInputElement;
-      const width = parseInt(target.value, 10);
-      this.currentWidth = width;
-      if (strokeValue) strokeValue.textContent = `${width}px`;
-      this.callbacks.onStrokeWidthChange?.(width);
+    // Color picker input
+    const colorPicker = document.getElementById('color-picker') as HTMLInputElement;
+    colorPicker?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      this.currentColor = color;
+      this.callbacks.onColorChange?.(color);
+      this.updateColorButtons(color);
     });
 
+    // Fill toggle buttons
+    const fillBtns = document.querySelectorAll('.fill-btn');
+    fillBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const fillType = (btn as HTMLElement).dataset.fill;
+        this.isFilled = fillType === 'solid';
+        this.callbacks.onFillChange?.(this.isFilled);
+        this.updateFillButtons(fillType || 'transparent');
+        
+        // Sync hidden checkbox
+        const fillToggle = document.getElementById('fill-toggle') as HTMLInputElement;
+        if (fillToggle) fillToggle.checked = this.isFilled;
+      });
+    });
+
+    // Stroke width buttons
+    const strokeBtns = document.querySelectorAll('.stroke-btn');
+    strokeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const width = parseInt((btn as HTMLElement).dataset.width || '5', 10);
+        this.currentWidth = width;
+        this.callbacks.onStrokeWidthChange?.(width);
+        this.updateStrokeButtons(width);
+        
+        // Sync hidden slider
+        const strokeSlider = document.getElementById('stroke-width') as HTMLInputElement;
+        if (strokeSlider) strokeSlider.value = width.toString();
+      });
+    });
+
+    // Set initial states
+    this.updateColorButtons(DEFAULTS.COLOR);
+    this.updateFillButtons('transparent');
+    this.updateStrokeButtons(DEFAULTS.STROKE_WIDTH);
+  }
+
+  private setupMenuDropdown(): void {
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuDropdown = document.getElementById('menu-dropdown');
+
+    // Toggle menu
+    menuToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuDropdown?.classList.toggle('hidden');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', () => {
+      menuDropdown?.classList.add('hidden');
+    });
+
+    // Prevent closing when clicking inside menu
+    menuDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // Menu actions
+    const exportPngBtn = document.getElementById('menu-export-png');
+    const exportSvgBtn = document.getElementById('menu-export-svg');
+    const clearBtn = document.getElementById('menu-clear');
+
+    exportPngBtn?.addEventListener('click', () => {
+      this.callbacks.onExportPNG?.();
+      menuDropdown?.classList.add('hidden');
+    });
+
+    exportSvgBtn?.addEventListener('click', () => {
+      this.callbacks.onExportSVG?.();
+      menuDropdown?.classList.add('hidden');
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Reset the entire canvas? This cannot be undone.')) {
+        this.callbacks.onClear?.();
+      }
+      menuDropdown?.classList.add('hidden');
+    });
+  }
+
+  private setupZoomControls(): void {
     // Undo/Redo buttons
     const undoBtn = document.getElementById('undo-btn');
     const redoBtn = document.getElementById('redo-btn');
@@ -96,24 +176,39 @@ export class UIManager {
     undoBtn?.addEventListener('click', () => this.callbacks.onUndo?.());
     redoBtn?.addEventListener('click', () => this.callbacks.onRedo?.());
 
-    // Clear button
-    const clearBtn = document.getElementById('clear-btn');
-    clearBtn?.addEventListener('click', () => {
-      if (confirm('Clear the entire canvas?')) {
-        this.callbacks.onClear?.();
-      }
+    // Zoom controls (placeholder for future implementation)
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+
+    zoomInBtn?.addEventListener('click', () => {
+      console.log('Zoom in (future feature)');
     });
 
-    // Export buttons
-    const exportPngBtn = document.getElementById('export-png-btn');
-    const exportSvgBtn = document.getElementById('export-svg-btn');
+    zoomOutBtn?.addEventListener('click', () => {
+      console.log('Zoom out (future feature)');
+    });
+  }
 
-    exportPngBtn?.addEventListener('click', () => this.callbacks.onExportPNG?.());
-    exportSvgBtn?.addEventListener('click', () => this.callbacks.onExportSVG?.());
+  private setupHelpPanel(): void {
+    const helpBtn = document.getElementById('help-btn');
+    const shortcutsPopup = document.getElementById('shortcuts-popup');
+    const closeBtn = document.getElementById('close-shortcuts');
 
-    // Set initial active state
-    this.updateToolButtons('brush');
-    this.updateColorPresets(DEFAULTS.COLOR);
+    helpBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      shortcutsPopup?.classList.toggle('hidden');
+    });
+
+    closeBtn?.addEventListener('click', () => {
+      shortcutsPopup?.classList.add('hidden');
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!shortcutsPopup?.contains(e.target as Node) && e.target !== helpBtn) {
+        shortcutsPopup?.classList.add('hidden');
+      }
+    });
   }
 
   private setupRoomControls(): void {
@@ -157,50 +252,29 @@ export class UIManager {
       const key = e.key.toLowerCase();
       const code = e.code;
 
-      // B - Brush tool
-      if (key === 'b') {
-        this.selectTool('brush');
-        return;
-      }
+      // Number keys for tools (1-6)
+      if (key === '1') { this.selectTool('brush'); return; }
+      if (key === '2') { this.selectTool('rectangle'); return; }
+      if (key === '3') { this.selectTool('circle'); return; }
+      if (key === '4') { this.selectTool('line'); return; }
+      if (key === '5') { this.selectTool('text'); return; }
+      if (key === '6' || key === '0') { this.selectTool('eraser'); return; }
 
-      // E - Eraser tool
-      if (key === 'e') {
-        this.selectTool('eraser');
-        return;
-      }
-
-      // R - Rectangle tool
-      if (key === 'r') {
-        this.selectTool('rectangle');
-        return;
-      }
-
-      // C - Circle tool
-      if (key === 'c') {
-        this.selectTool('circle');
-        return;
-      }
-
-      // L - Line tool
-      if (key === 'l') {
-        this.selectTool('line');
-        return;
-      }
-
-      // T - Text tool
-      if (key === 't') {
-        this.selectTool('text');
-        return;
-      }
+      // Letter shortcuts
+      if (key === 'b') { this.selectTool('brush'); return; }
+      if (key === 'e') { this.selectTool('eraser'); return; }
+      if (key === 'r') { this.selectTool('rectangle'); return; }
+      if (key === 'c') { this.selectTool('circle'); return; }
+      if (key === 'l') { this.selectTool('line'); return; }
+      if (key === 't') { this.selectTool('text'); return; }
 
       // F - Toggle fill
       if (key === 'f') {
+        this.isFilled = !this.isFilled;
+        this.callbacks.onFillChange?.(this.isFilled);
+        this.updateFillButtons(this.isFilled ? 'solid' : 'transparent');
         const fillToggle = document.getElementById('fill-toggle') as HTMLInputElement;
-        if (fillToggle) {
-          fillToggle.checked = !fillToggle.checked;
-          this.isFilled = fillToggle.checked;
-          this.callbacks.onFillChange?.(this.isFilled);
-        }
+        if (fillToggle) fillToggle.checked = this.isFilled;
         return;
       }
 
@@ -233,6 +307,26 @@ export class UIManager {
         this.updateStrokeWidth(newWidth);
         return;
       }
+
+      // Escape - Close menus
+      if (key === 'escape') {
+        document.getElementById('menu-dropdown')?.classList.add('hidden');
+        document.getElementById('shortcuts-popup')?.classList.add('hidden');
+        return;
+      }
+    });
+  }
+
+  private hideWatermarkOnDraw(): void {
+    // Hide watermark after first stroke
+    const canvas = document.getElementById('canvas');
+    let hasDrawn = false;
+
+    canvas?.addEventListener('pointerdown', () => {
+      if (!hasDrawn) {
+        hasDrawn = true;
+        document.querySelector('.canvas-watermark')?.classList.add('hidden');
+      }
     });
   }
 
@@ -240,7 +334,13 @@ export class UIManager {
     this.currentTool = tool;
     this.updateToolButtons(tool);
     this.callbacks.onToolChange?.(tool);
-    console.log('Tool selected:', tool);
+
+    // Show/hide fill options based on tool
+    const fillGroup = document.getElementById('fill-group');
+    if (fillGroup) {
+      const showFill = ['rectangle', 'circle'].includes(tool);
+      fillGroup.style.display = showFill ? 'flex' : 'none';
+    }
   }
 
   private updateToolButtons(activeTool: ToolType): void {
@@ -253,9 +353,9 @@ export class UIManager {
       text: 'text-btn'
     };
 
-    // Remove active from all
-    Object.values(toolButtons).forEach(id => {
-      document.getElementById(id)?.classList.remove('active');
+    // Remove active from all toolbar buttons
+    document.querySelectorAll('.toolbar-btn').forEach(btn => {
+      btn.classList.remove('active');
     });
 
     // Add active to current
@@ -263,31 +363,62 @@ export class UIManager {
     if (activeId) {
       document.getElementById(activeId)?.classList.add('active');
     }
+
+    // Also handle arrow button for line tool
+    if (activeTool === 'line') {
+      document.getElementById('arrow-btn')?.classList.remove('active');
+    }
   }
 
-  private updateColorPresets(activeColor: string): void {
-    const presets = document.querySelectorAll('.color-preset');
-    presets.forEach((preset) => {
-      const presetColor = (preset as HTMLElement).dataset.color;
-      preset.classList.toggle('active', presetColor === activeColor);
+  private updateColorButtons(activeColor: string): void {
+    const colorBtns = document.querySelectorAll('.color-btn');
+    colorBtns.forEach((btn) => {
+      const btnColor = (btn as HTMLElement).dataset.color;
+      btn.classList.toggle('active', btnColor?.toLowerCase() === activeColor.toLowerCase());
+    });
+  }
+
+  private updateFillButtons(activeFill: string): void {
+    const fillBtns = document.querySelectorAll('.fill-btn');
+    fillBtns.forEach((btn) => {
+      const btnFill = (btn as HTMLElement).dataset.fill;
+      btn.classList.toggle('active', btnFill === activeFill);
+    });
+  }
+
+  private updateStrokeButtons(activeWidth: number): void {
+    const strokeBtns = document.querySelectorAll('.stroke-btn');
+    strokeBtns.forEach((btn) => {
+      const btnWidth = parseInt((btn as HTMLElement).dataset.width || '0', 10);
+      btn.classList.toggle('active', btnWidth === activeWidth);
     });
   }
 
   private updateStrokeWidth(width: number): void {
     this.currentWidth = width;
     const slider = document.getElementById('stroke-width') as HTMLInputElement;
-    const valueDisplay = document.getElementById('stroke-value');
-
     if (slider) slider.value = width.toString();
-    if (valueDisplay) valueDisplay.textContent = `${width}px`;
-
     this.callbacks.onStrokeWidthChange?.(width);
+    
+    // Find closest button and update (8 options)
+    const widths = [1, 2, 4, 8, 12, 20, 32, 50];
+    const closest = widths.reduce((a, b) => 
+      Math.abs(b - width) < Math.abs(a - width) ? b : a
+    );
+    this.updateStrokeButtons(closest);
   }
 
   public updateRoomId(roomId: string): void {
     const roomIdEl = document.getElementById('room-id');
     if (roomIdEl) {
       roomIdEl.textContent = roomId;
+    }
+  }
+
+  public updateUserCount(count: number): void {
+    const countEl = document.getElementById('user-count');
+    if (countEl) {
+      countEl.textContent = count.toString();
     }
   }
 
