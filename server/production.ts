@@ -50,7 +50,17 @@ app.get('/health', (_, res) => {
   });
 });
 
-// SPA fallback - serve index.html for all routes
+// Landing page as default route
+app.get('/', (_, res) => {
+  res.sendFile(path.join(clientPath, 'landing.html'));
+});
+
+// Canvas app route
+app.get('/canvas', (_, res) => {
+  res.sendFile(path.join(clientPath, 'index.html'));
+});
+
+// SPA fallback - serve index.html for unknown routes
 app.get('*', (_, res) => {
   res.sendFile(path.join(clientPath, 'index.html'));
 });

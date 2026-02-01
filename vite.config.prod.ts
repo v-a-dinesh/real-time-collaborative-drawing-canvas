@@ -16,6 +16,10 @@ export default defineConfig({
       }
     },
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'client/index.html'),
+        landing: path.resolve(__dirname, 'client/landing.html')
+      },
       output: {
         manualChunks: {
           'socket': ['socket.io-client']

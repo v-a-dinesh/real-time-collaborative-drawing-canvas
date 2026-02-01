@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flamdraw - Real-Time Collaborative Whiteboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Virgil&family=Inter:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+  <!-- Animated Background Decorations -->
+  <div class="bg-decorations">
+    <div class="deco deco-1">○</div>
+    <div class="deco deco-2">△</div>
+    <div class="deco deco-3">□</div>
+    <div class="deco deco-4">◇</div>
+    <div class="deco deco-5">~</div>
+    <div class="deco deco-6">*</div>
+    <div class="deco deco-7">≈</div>
+    <div class="deco deco-8">•</div>
+    <div class="deco deco-9">○</div>
+    <div class="deco deco-10">△</div>
+    <div class="deco deco-11">□</div>
+    <div class="deco deco-12">◇</div>
+    <svg class="deco-svg deco-arrow-1" width="60" height="40" viewBox="0 0 60 40">
+      <path d="M5 35 Q 30 5, 55 15" stroke="#E8B4B8" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M50 10 L55 15 L48 18" stroke="#E8B4B8" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <svg class="deco-svg deco-arrow-2" width="50" height="50" viewBox="0 0 50 50">
+      <path d="M5 45 Q 25 25, 45 30" stroke="#A8D5BA" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <svg class="deco-svg deco-squiggle-1" width="80" height="30" viewBox="0 0 80 30">
+      <path d="M5 15 Q 20 5, 40 15 Q 60 25, 75 15" stroke="#B4C7E8" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <!-- Floating Cursors (collaborative feel) -->
+  <div class="floating-cursors">
+    <div class="cursor-wrapper cursor-1">
+      <svg class="cursor-icon" width="20" height="20" viewBox="0 0 24 24">
+        <path d="M4 4l16 6-6 2-2 6z" fill="#FF6B6B" stroke="#fff" stroke-width="1"/>
+      </svg>
+      <span class="cursor-label" style="background: #FF6B6B;">Alice</span>
+    </div>
+    <div class="cursor-wrapper cursor-2">
+      <svg class="cursor-icon" width="20" height="20" viewBox="0 0 24 24">
+        <path d="M4 4l16 6-6 2-2 6z" fill="#4ECDC4" stroke="#fff" stroke-width="1"/>
+      </svg>
+      <span class="cursor-label" style="background: #4ECDC4;">Bob</span>
+    </div>
+    <div class="cursor-wrapper cursor-3">
+      <svg class="cursor-icon" width="20" height="20" viewBox="0 0 24 24">
+        <path d="M4 4l16 6-6 2-2 6z" fill="#9B59B6" stroke="#fff" stroke-width="1"/>
+      </svg>
+      <span class="cursor-label" style="background: #9B59B6;">Charlie</span>
+    </div>
+    <div class="cursor-wrapper cursor-4">
+      <svg class="cursor-icon" width="20" height="20" viewBox="0 0 24 24">
+        <path d="M4 4l16 6-6 2-2 6z" fill="#F39C12" stroke="#fff" stroke-width="1"/>
+      </svg>
+      <span class="cursor-label" style="background: #F39C12;">Diana</span>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="2" width="28" height="28" rx="6" fill="#6366F1"/>
+          <path d="M10 22L14 10L18 18L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="10" cy="22" r="2" fill="white"/>
+          <circle cx="22" cy="12" r="2" fill="white"/>
+        </svg>
+      </div>
+      <span class="brand-name">FLAMDRAW</span>
+    </div>
+    
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it Works</a>
+      <a href="https://github.com/v-a-dinesh/real-time-collaborative-drawing-canvas" target="_blank" class="github-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
+    </div>
+    
+    <a href="canvas" class="btn-primary nav-cta">
+      <span>Free Whiteboard</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+      </svg>
+    </a>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">
+        Step up your
+        <span class="highlight">Flamdraw game</span>
+      </h1>
+      <p class="hero-subtitle">
+        Real-time collaborative whiteboard. Draw together, create together.
+        <br>No signup required. Just start drawing.
+      </p>
+      
+      <div class="hero-cta">
+        <a href="canvas" class="btn-primary btn-large">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+          <span>Start Drawing Now</span>
+        </a>
+        <a href="#features" class="btn-secondary btn-large">
+          <span>Explore Features</span>
+        </a>
+      </div>
+      
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-icon">🎨</span>
+          <span class="stat-text">Unlimited Canvas</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">👥</span>
+          <span class="stat-text">Real-time Collaboration</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">🚀</span>
+          <span class="stat-text">Zero Latency</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Hero Image/Preview -->
+    <div class="hero-preview">
+      <div class="preview-window">
+        <div class="preview-header">
+          <div class="preview-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="preview-title">Flamdraw Canvas</span>
+        </div>
+        <div class="preview-content">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='350' viewBox='0 0 600 350'%3E%3Crect fill='%23ffffff' width='600' height='350'/%3E%3Crect x='20' y='20' width='80' height='30' rx='6' fill='%23f3f4f6'/%3E%3Crect x='110' y='20' width='80' height='30' rx='6' fill='%23f3f4f6'/%3E%3Crect x='200' y='20' width='80' height='30' rx='6' fill='%23f3f4f6'/%3E%3Cpath d='M100 150 Q200 80 300 150 Q400 220 500 150' stroke='%236366F1' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Crect x='150' y='180' width='120' height='80' rx='8' fill='none' stroke='%23FF6B6B' stroke-width='3'/%3E%3Ccircle cx='450' cy='200' r='50' fill='none' stroke='%234ECDC4' stroke-width='3'/%3E%3Ctext x='180' y='280' font-family='Caveat' font-size='24' fill='%239B59B6'%3EHello World!%3C/text%3E%3C/svg%3E" alt="Canvas Preview" class="preview-image">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="features">
+    <div class="section-header">
+      <h2>Everything you need to create together</h2>
+      <p>Powerful features for seamless real-time collaboration</p>
+    </div>
+    
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #FF6B6B, #FF8E8E);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+        </div>
+        <h3>Freehand Drawing</h3>
+        <p>Draw with smooth, pressure-sensitive strokes. Choose from brush and eraser tools with customizable sizes.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #4ECDC4, #44A08D);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+            <circle cx="12" cy="12" r="4"/>
+          </svg>
+        </div>
+        <h3>Shape Tools</h3>
+        <p>Create perfect rectangles, circles, and lines. Hold shift for squares and perfect circles.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+          </svg>
+        </div>
+        <h3>Real-time Sync</h3>
+        <p>See everyone's changes instantly. WebSocket-powered for zero-latency collaboration.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #F39C12, #E67E22);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+          </svg>
+        </div>
+        <h3>Ghost Cursors</h3>
+        <p>See where your collaborators are drawing in real-time with colorful labeled cursors.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #9B59B6, #8E44AD);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+          </svg>
+        </div>
+        <h3>Global Undo/Redo</h3>
+        <p>Collaborative undo/redo that works across all users. Never lose your work.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #1ABC9C, #16A085);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+          </svg>
+        </div>
+        <h3>Export Options</h3>
+        <p>Download your canvas as PNG or SVG. Perfect for sharing or further editing.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #E74C3C, #C0392B);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        </div>
+        <h3>Text Tool</h3>
+        <p>Add text annotations anywhere on the canvas with customizable colors and sizes.</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon" style="background: linear-gradient(135deg, #3498DB, #2980B9);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+          </svg>
+        </div>
+        <h3>Room Support</h3>
+        <p>Create private rooms with unique URLs. Collaborate with your team securely.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works Section -->
+  <section id="how-it-works" class="how-it-works">
+    <div class="section-header">
+      <h2>Start collaborating in seconds</h2>
+      <p>No signup, no installation, just draw</p>
+    </div>
+    
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Enter Your Name</h3>
+          <p>Choose a display name so your collaborators can see who's drawing what.</p>
+        </div>
+      </div>
+      
+      <div class="step-arrow">→</div>
+      
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>Share the Link</h3>
+          <p>Send the room URL to your teammates. They'll join instantly.</p>
+        </div>
+      </div>
+      
+      <div class="step-arrow">→</div>
+      
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>Draw Together</h3>
+          <p>See each other's strokes in real-time. Collaborate like you're in the same room.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack Section -->
+  <section class="tech-stack">
+    <div class="section-header">
+      <h2>Built with Modern Tech</h2>
+      <p>Robust, performant, and developer-friendly</p>
+    </div>
+    
+    <div class="tech-grid">
+      <div class="tech-item">
+        <div class="tech-icon">🟦</div>
+        <span>TypeScript</span>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">⚡</div>
+        <span>Socket.io</span>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">🎨</div>
+        <span>Canvas API</span>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">🚀</div>
+        <span>Vite</span>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">🐳</div>
+        <span>Docker</span>
+      </div>
+      <div class="tech-item">
+        <div class="tech-icon">📦</div>
+        <span>Node.js</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="cta-content">
+      <h2>Ready to collaborate?</h2>
+      <p>Start drawing with your team right now. It's free, forever.</p>
+      <a href="canvas" class="btn-primary btn-xlarge">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+        </svg>
+        <span>Open Free Whiteboard</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect x="2" y="2" width="28" height="28" rx="6" fill="#6366F1"/>
+            <path d="M10 22L14 10L18 18L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span>Flamdraw</span>
+      </div>
+      
+      <div class="footer-links">
+        <a href="https://github.com/v-a-dinesh/real-time-collaborative-drawing-canvas" target="_blank">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+      
+      <p class="footer-copy">Made with ❤️ for the Flam Assignment</p>
+    </div>
+  </footer>
+
+  <script>
+    // Animate floating cursors
+    document.addEventListener('DOMContentLoaded', () => {
+      const cursors = document.querySelectorAll('.cursor-wrapper');
+      
+      cursors.forEach((cursor, index) => {
+        // Random movement animation
+        const animate = () => {
+          const duration = 3000 + Math.random() * 2000;
+          const x = Math.random() * 100 - 50;
+          const y = Math.random() * 100 - 50;
+          
+          cursor.style.transition = `transform ${duration}ms ease-in-out`;
+          cursor.style.transform = `translate(${x}px, ${y}px)`;
+          
+          setTimeout(animate, duration);
+        };
+        
+        setTimeout(animate, index * 500);
+      });
+
+      // Parallax effect for decorations
+      document.addEventListener('mousemove', (e) => {
+        const decorations = document.querySelectorAll('.deco');
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        
+        decorations.forEach((deco, i) => {
+          const speed = (i % 3 + 1) * 10;
+          const dx = (x - 0.5) * speed;
+          const dy = (y - 0.5) * speed;
+          deco.style.transform = `translate(${dx}px, ${dy}px)`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

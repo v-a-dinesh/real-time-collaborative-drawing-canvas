@@ -85,6 +85,12 @@ app.get("/health", (_, res) => {
     uptime: process.uptime()
   });
 });
+app.get("/", (_, res) => {
+  res.sendFile(path.join(clientPath, "landing.html"));
+});
+app.get("/canvas", (_, res) => {
+  res.sendFile(path.join(clientPath, "index.html"));
+});
 app.get("*", (_, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
 });
