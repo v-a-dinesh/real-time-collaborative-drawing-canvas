@@ -335,22 +335,37 @@ io.on("connection", (socket) => {
       const roomState2 = getUserRoom(socket.id);
       const roomId = userRooms.get(socket.id) || DEFAULT_ROOM;
       if (roomState2.strokes.length === 0 && roomState2.shapes.length === 0 && roomState2.textElements.length === 0) return;
+      let maxTime = 0;
+      let maxType = null;
+      let maxIndex = -1;
+      roomState2.strokes.forEach((s, i) => {
+        if (s.timestamp > maxTime) {
+          maxTime = s.timestamp;
+          maxType = "stroke";
+          maxIndex = i;
+        }
+      });
+      roomState2.shapes.forEach((s, i) => {
+        if (s.timestamp > maxTime) {
+          maxTime = s.timestamp;
+          maxType = "shape";
+          maxIndex = i;
+        }
+      });
+      roomState2.textElements.forEach((t, i) => {
+        if (t.timestamp > maxTime) {
+          maxTime = t.timestamp;
+          maxType = "text";
+          maxIndex = i;
+        }
+      });
       let removed;
-      const lastStroke = roomState2.strokes[roomState2.strokes.length - 1];
-      const lastShape = roomState2.shapes[roomState2.shapes.length - 1];
-      const lastText = roomState2.textElements[roomState2.textElements.length - 1];
-      const times = [
-        lastStroke?.timestamp || 0,
-        lastShape?.timestamp || 0,
-        lastText?.timestamp || 0
-      ];
-      const maxTime = Math.max(...times);
-      if (lastStroke?.timestamp === maxTime) {
-        removed = roomState2.strokes.pop();
-      } else if (lastShape?.timestamp === maxTime) {
-        removed = roomState2.shapes.pop();
-      } else if (lastText?.timestamp === maxTime) {
-        removed = roomState2.textElements.pop();
+      if (maxType === "stroke" && maxIndex !== -1) {
+        removed = roomState2.strokes.splice(maxIndex, 1)[0];
+      } else if (maxType === "shape" && maxIndex !== -1) {
+        removed = roomState2.shapes.splice(maxIndex, 1)[0];
+      } else if (maxType === "text" && maxIndex !== -1) {
+        removed = roomState2.textElements.splice(maxIndex, 1)[0];
       }
       if (removed) {
         roomState2.redoStack.push([removed]);
@@ -377,11 +392,29 @@ io.on("connection", (socket) => {
       if (redoItems) {
         for (const item of redoItems) {
           if ("points" in item && Array.isArray(item.points)) {
-            roomState2.strokes.push(item);
+            const stroke = item;
+            const insertIndex = roomState2.strokes.findIndex((s) => s.timestamp > stroke.timestamp);
+            if (insertIndex === -1) {
+              roomState2.strokes.push(stroke);
+            } else {
+              roomState2.strokes.splice(insertIndex, 0, stroke);
+            }
           } else if ("startPoint" in item && "endPoint" in item) {
-            roomState2.shapes.push(item);
+            const shape = item;
+            const insertIndex = roomState2.shapes.findIndex((s) => s.timestamp > shape.timestamp);
+            if (insertIndex === -1) {
+              roomState2.shapes.push(shape);
+            } else {
+              roomState2.shapes.splice(insertIndex, 0, shape);
+            }
           } else if ("text" in item && "position" in item) {
-            roomState2.textElements.push(item);
+            const text = item;
+            const insertIndex = roomState2.textElements.findIndex((t) => t.timestamp > text.timestamp);
+            if (insertIndex === -1) {
+              roomState2.textElements.push(text);
+            } else {
+              roomState2.textElements.splice(insertIndex, 0, text);
+            }
           }
         }
       }

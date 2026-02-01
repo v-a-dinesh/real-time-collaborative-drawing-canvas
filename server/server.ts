@@ -437,27 +437,43 @@ io.on('connection', (socket: Socket) => {
       
       if (roomState.strokes.length === 0 && roomState.shapes.length === 0 && roomState.textElements.length === 0) return;
 
-      // Undo last action (stroke, shape, or text)
+      // Find the most recent item across all types by timestamp
+      let maxTime = 0;
+      let maxType: 'stroke' | 'shape' | 'text' | null = null;
+      let maxIndex = -1;
+
+      roomState.strokes.forEach((s, i) => {
+        if (s.timestamp > maxTime) {
+          maxTime = s.timestamp;
+          maxType = 'stroke';
+          maxIndex = i;
+        }
+      });
+
+      roomState.shapes.forEach((s, i) => {
+        if (s.timestamp > maxTime) {
+          maxTime = s.timestamp;
+          maxType = 'shape';
+          maxIndex = i;
+        }
+      });
+
+      roomState.textElements.forEach((t, i) => {
+        if (t.timestamp > maxTime) {
+          maxTime = t.timestamp;
+          maxType = 'text';
+          maxIndex = i;
+        }
+      });
+
       let removed: Stroke | Shape | TextElement | undefined;
-      
-      // Find and remove the most recent item
-      const lastStroke = roomState.strokes[roomState.strokes.length - 1];
-      const lastShape = roomState.shapes[roomState.shapes.length - 1];
-      const lastText = roomState.textElements[roomState.textElements.length - 1];
-      
-      const times = [
-        lastStroke?.timestamp || 0,
-        lastShape?.timestamp || 0,
-        lastText?.timestamp || 0
-      ];
-      const maxTime = Math.max(...times);
-      
-      if (lastStroke?.timestamp === maxTime) {
-        removed = roomState.strokes.pop();
-      } else if (lastShape?.timestamp === maxTime) {
-        removed = roomState.shapes.pop();
-      } else if (lastText?.timestamp === maxTime) {
-        removed = roomState.textElements.pop();
+
+      if (maxType === 'stroke' && maxIndex !== -1) {
+        removed = roomState.strokes.splice(maxIndex, 1)[0];
+      } else if (maxType === 'shape' && maxIndex !== -1) {
+        removed = roomState.shapes.splice(maxIndex, 1)[0];
+      } else if (maxType === 'text' && maxIndex !== -1) {
+        removed = roomState.textElements.splice(maxIndex, 1)[0];
       }
       
       if (removed) {
@@ -490,13 +506,32 @@ io.on('connection', (socket: Socket) => {
       const redoItems = roomState.redoStack.pop();
       if (redoItems) {
         for (const item of redoItems) {
-          // Type detection: strokes have 'points', shapes have 'startPoint', text has 'text'
+          // Type detection and insert in correct position based on timestamp
           if ('points' in item && Array.isArray((item as Stroke).points)) {
-            roomState.strokes.push(item as Stroke);
+            const stroke = item as Stroke;
+            // Insert in timestamp order
+            const insertIndex = roomState.strokes.findIndex(s => s.timestamp > stroke.timestamp);
+            if (insertIndex === -1) {
+              roomState.strokes.push(stroke);
+            } else {
+              roomState.strokes.splice(insertIndex, 0, stroke);
+            }
           } else if ('startPoint' in item && 'endPoint' in item) {
-            roomState.shapes.push(item as Shape);
+            const shape = item as Shape;
+            const insertIndex = roomState.shapes.findIndex(s => s.timestamp > shape.timestamp);
+            if (insertIndex === -1) {
+              roomState.shapes.push(shape);
+            } else {
+              roomState.shapes.splice(insertIndex, 0, shape);
+            }
           } else if ('text' in item && 'position' in item) {
-            roomState.textElements.push(item as TextElement);
+            const text = item as TextElement;
+            const insertIndex = roomState.textElements.findIndex(t => t.timestamp > text.timestamp);
+            if (insertIndex === -1) {
+              roomState.textElements.push(text);
+            } else {
+              roomState.textElements.splice(insertIndex, 0, text);
+            }
           }
         }
       }
