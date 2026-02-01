@@ -96,7 +96,6 @@ function getOrCreateRoom(roomId) {
       strokes: [],
       shapes: [],
       textElements: [],
-      undoStack: [],
       redoStack: [],
       users: /* @__PURE__ */ new Map(),
       activeStrokes: /* @__PURE__ */ new Map()
@@ -268,9 +267,6 @@ io.on("connection", (socket) => {
       roomState2.strokes.push(stroke);
       roomState2.activeStrokes.delete(typedData.strokeId);
       roomState2.redoStack = [];
-      if (roomState2.undoStack.length > MAX_UNDO_STACK) {
-        roomState2.undoStack.shift();
-      }
       socket.to(roomId).emit(SOCKET_EVENTS.STROKE_END_BROADCAST, {
         strokeId: typedData.strokeId,
         userId: socket.id
@@ -391,6 +387,10 @@ io.on("connection", (socket) => {
       const redoItems = roomState2.redoStack.pop();
       if (redoItems) {
         for (const item of redoItems) {
+          if (typeof item.timestamp !== "number" || item.timestamp <= 0) {
+            console.warn("Skipping redo item with invalid timestamp");
+            continue;
+          }
           if ("points" in item && Array.isArray(item.points)) {
             const stroke = item;
             const insertIndex = roomState2.strokes.findIndex((s) => s.timestamp > stroke.timestamp);

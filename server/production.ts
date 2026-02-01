@@ -63,7 +63,6 @@ interface RoomState {
   strokes: Stroke[];
   shapes: Shape[];
   textElements: TextElement[];
-  undoStack: (Stroke | Shape | TextElement)[][];
   redoStack: (Stroke | Shape | TextElement)[][];
   users: Map<string, User>;
   activeStrokes: Map<string, Stroke>;
@@ -78,7 +77,6 @@ function getOrCreateRoom(roomId: string): RoomState {
       strokes: [],
       shapes: [],
       textElements: [],
-      undoStack: [],
       redoStack: [],
       users: new Map(),
       activeStrokes: new Map()
@@ -325,10 +323,6 @@ io.on('connection', (socket: Socket) => {
       roomState.activeStrokes.delete(typedData.strokeId);
       roomState.redoStack = [];
 
-      if (roomState.undoStack.length > MAX_UNDO_STACK) {
-        roomState.undoStack.shift();
-      }
-
       socket.to(roomId).emit(SOCKET_EVENTS.STROKE_END_BROADCAST, {
         strokeId: typedData.strokeId,
         userId: socket.id
@@ -497,6 +491,12 @@ io.on('connection', (socket: Socket) => {
       const redoItems = roomState.redoStack.pop();
       if (redoItems) {
         for (const item of redoItems) {
+          // Validate item has a timestamp
+          if (typeof item.timestamp !== 'number' || item.timestamp <= 0) {
+            console.warn('Skipping redo item with invalid timestamp');
+            continue;
+          }
+          
           // Type detection and insert in correct position based on timestamp
           if ('points' in item && Array.isArray((item as Stroke).points)) {
             const stroke = item as Stroke;
