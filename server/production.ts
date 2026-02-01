@@ -37,7 +37,21 @@ const io = new Server(httpServer, {
 
 // Serve static files from built client
 const clientPath = path.join(__dirname, '..', 'dist', 'client');
-app.use(express.static(clientPath));
+
+// Landing page as default route - MUST be before static middleware
+app.get('/', (_, res) => {
+  res.sendFile(path.join(clientPath, 'landing.html'));
+});
+
+// Canvas app route
+app.get('/canvas', (_, res) => {
+  res.sendFile(path.join(clientPath, 'index.html'));
+});
+
+// Static files (after explicit routes)
+app.use(express.static(clientPath, {
+  index: false  // Disable automatic index.html serving
+}));
 
 // Health check endpoint
 app.get('/health', (_, res) => {
@@ -48,16 +62,6 @@ app.get('/health', (_, res) => {
     rooms: rooms.size,
     uptime: process.uptime()
   });
-});
-
-// Landing page as default route
-app.get('/', (_, res) => {
-  res.sendFile(path.join(clientPath, 'landing.html'));
-});
-
-// Canvas app route
-app.get('/canvas', (_, res) => {
-  res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 // SPA fallback - serve index.html for unknown routes
