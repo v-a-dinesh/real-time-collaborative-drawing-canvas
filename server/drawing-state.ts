@@ -239,6 +239,8 @@ export function performRedo(roomState: RoomState): {
         } else {
           roomState.textElements.splice(insertIndex, 0, text);
         }
+      } else {
+        console.warn('Redo item did not match any known type:', Object.keys(item));
       }
     }
   }
