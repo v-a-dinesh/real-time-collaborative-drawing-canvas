@@ -19,7 +19,6 @@ export interface RoomState {
   strokes: Stroke[];
   shapes: Shape[];
   textElements: TextElement[];
-  undoStack: (Stroke | Shape | TextElement)[][];
   redoStack: (Stroke | Shape | TextElement)[][];
   users: Map<string, User>;
   activeStrokes: Map<string, Stroke>;
@@ -33,7 +32,6 @@ export function createEmptyRoomState(): RoomState {
     strokes: [],
     shapes: [],
     textElements: [],
-    undoStack: [],
     redoStack: [],
     users: new Map(),
     activeStrokes: new Map()
@@ -122,16 +120,11 @@ export function endActiveStroke(
   roomState.activeStrokes.delete(strokeId);
   addStroke(roomState, stroke);
   
-  // Trim undo stack
-  if (roomState.undoStack.length > MAX_UNDO_STACK) {
-    roomState.undoStack.shift();
-  }
-  
   return stroke;
 }
 
 /**
- * Perform undo operation - removes most recent item across all types
+ * Perform undo operation - removes most recent item across all types by timestamp
  * Returns the updated state or null if nothing to undo
  */
 export function performUndo(roomState: RoomState): {
@@ -147,26 +140,43 @@ export function performUndo(roomState: RoomState): {
     return null;
   }
   
-  // Find the most recent item by timestamp
-  const lastStroke = roomState.strokes[roomState.strokes.length - 1];
-  const lastShape = roomState.shapes[roomState.shapes.length - 1];
-  const lastText = roomState.textElements[roomState.textElements.length - 1];
-  
-  const times = [
-    lastStroke?.timestamp || 0,
-    lastShape?.timestamp || 0,
-    lastText?.timestamp || 0
-  ];
-  const maxTime = Math.max(...times);
-  
+  // Find the most recent item across all types by timestamp
+  let maxTime = 0;
+  let maxType: 'stroke' | 'shape' | 'text' | null = null;
+  let maxIndex = -1;
+
+  roomState.strokes.forEach((s, i) => {
+    if (s.timestamp > maxTime) {
+      maxTime = s.timestamp;
+      maxType = 'stroke';
+      maxIndex = i;
+    }
+  });
+
+  roomState.shapes.forEach((s, i) => {
+    if (s.timestamp > maxTime) {
+      maxTime = s.timestamp;
+      maxType = 'shape';
+      maxIndex = i;
+    }
+  });
+
+  roomState.textElements.forEach((t, i) => {
+    if (t.timestamp > maxTime) {
+      maxTime = t.timestamp;
+      maxType = 'text';
+      maxIndex = i;
+    }
+  });
+
   let removed: Stroke | Shape | TextElement | undefined;
-  
-  if (lastStroke?.timestamp === maxTime) {
-    removed = roomState.strokes.pop();
-  } else if (lastShape?.timestamp === maxTime) {
-    removed = roomState.shapes.pop();
-  } else if (lastText?.timestamp === maxTime) {
-    removed = roomState.textElements.pop();
+
+  if (maxType === 'stroke' && maxIndex !== -1) {
+    removed = roomState.strokes.splice(maxIndex, 1)[0];
+  } else if (maxType === 'shape' && maxIndex !== -1) {
+    removed = roomState.shapes.splice(maxIndex, 1)[0];
+  } else if (maxType === 'text' && maxIndex !== -1) {
+    removed = roomState.textElements.splice(maxIndex, 1)[0];
   }
   
   if (removed) {
@@ -184,7 +194,7 @@ export function performUndo(roomState: RoomState): {
 }
 
 /**
- * Perform redo operation
+ * Perform redo operation - restores items in correct timestamp order
  */
 export function performRedo(roomState: RoomState): {
   strokes: Stroke[];
@@ -198,12 +208,37 @@ export function performRedo(roomState: RoomState): {
   const redoItems = roomState.redoStack.pop();
   if (redoItems) {
     for (const item of redoItems) {
-      if ('points' in item) {
-        roomState.strokes.push(item as Stroke);
-      } else if ('type' in item) {
-        roomState.shapes.push(item as Shape);
-      } else if ('text' in item) {
-        roomState.textElements.push(item as TextElement);
+      // Validate item has a timestamp
+      if (typeof item.timestamp !== 'number' || item.timestamp <= 0) {
+        console.warn('Skipping redo item with invalid timestamp');
+        continue;
+      }
+      
+      // Type detection and insert in correct position based on timestamp
+      if ('points' in item && Array.isArray((item as Stroke).points)) {
+        const stroke = item as Stroke;
+        const insertIndex = roomState.strokes.findIndex(s => s.timestamp > stroke.timestamp);
+        if (insertIndex === -1) {
+          roomState.strokes.push(stroke);
+        } else {
+          roomState.strokes.splice(insertIndex, 0, stroke);
+        }
+      } else if ('startPoint' in item && 'endPoint' in item) {
+        const shape = item as Shape;
+        const insertIndex = roomState.shapes.findIndex(s => s.timestamp > shape.timestamp);
+        if (insertIndex === -1) {
+          roomState.shapes.push(shape);
+        } else {
+          roomState.shapes.splice(insertIndex, 0, shape);
+        }
+      } else if ('text' in item && 'position' in item) {
+        const text = item as TextElement;
+        const insertIndex = roomState.textElements.findIndex(t => t.timestamp > text.timestamp);
+        if (insertIndex === -1) {
+          roomState.textElements.push(text);
+        } else {
+          roomState.textElements.splice(insertIndex, 0, text);
+        }
       }
     }
   }
@@ -237,7 +272,6 @@ export function clearRoomState(roomState: RoomState): void {
   roomState.strokes = [];
   roomState.shapes = [];
   roomState.textElements = [];
-  roomState.undoStack = [];
   roomState.redoStack = [];
   roomState.activeStrokes.clear();
 }

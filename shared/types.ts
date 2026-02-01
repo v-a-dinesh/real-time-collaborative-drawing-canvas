@@ -69,7 +69,6 @@ export interface DrawingState {
   shapes: Shape[];
   textElements: TextElement[];
   users: User[];
-  undoStack: (Stroke | Shape | TextElement)[][];
   redoStack: (Stroke | Shape | TextElement)[][];
 }
 
