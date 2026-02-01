@@ -22,9 +22,9 @@ interface PerformanceStats {
 }
 
 class App {
-  private canvas: CanvasManager;
-  private ui: UIManager;
-  private ws: WebSocketManager;
+  private canvas!: CanvasManager;
+  private ui!: UIManager;
+  private ws!: WebSocketManager;
   private ghostCursors: Map<string, GhostCursor> = new Map();
   private cursorContainer!: HTMLDivElement;
   private usersListElement!: HTMLDivElement;
@@ -42,10 +42,66 @@ class App {
     latency: 0
   };
   private animationFrameId: number = 0;
+  private username: string = '';
 
   constructor() {
     console.log('Initializing App...');
     
+    // Show username modal first
+    this.setupUsernameModal();
+  }
+
+  private setupUsernameModal(): void {
+    const modal = document.getElementById('username-modal');
+    const input = document.getElementById('username-input') as HTMLInputElement;
+    const joinBtn = document.getElementById('join-btn');
+    const app = document.getElementById('app');
+
+    if (!modal || !input || !joinBtn || !app) {
+      console.error('Modal elements not found');
+      return;
+    }
+
+    // Check for saved username
+    const savedUsername = localStorage.getItem('canvas-username');
+    if (savedUsername) {
+      input.value = savedUsername;
+    }
+
+    // Handle join
+    const handleJoin = () => {
+      const name = input.value.trim();
+      if (name.length < 2) {
+        input.style.borderColor = '#ef4444';
+        input.focus();
+        return;
+      }
+
+      this.username = name;
+      localStorage.setItem('canvas-username', name);
+
+      // Hide modal, show app
+      modal.classList.add('hidden');
+      app.classList.remove('hidden');
+
+      // Initialize the app
+      this.initializeApp();
+    };
+
+    joinBtn.addEventListener('click', handleJoin);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleJoin();
+    });
+
+    input.addEventListener('input', () => {
+      input.style.borderColor = '#e0e0e0';
+    });
+
+    // Focus input
+    setTimeout(() => input.focus(), 100);
+  }
+
+  private initializeApp(): void {
     this.canvas = new CanvasManager('canvas');
     this.ui = new UIManager();
     this.ws = new WebSocketManager();
@@ -62,8 +118,8 @@ class App {
     // Check URL for room ID
     this.checkUrlForRoom();
 
-    // Connect to server
-    this.ws.connect();
+    // Connect to server with username
+    this.ws.connect(this.username);
 
     // Cleanup old cursors periodically
     setInterval(() => this.cleanupOldCursors(), 5000);
@@ -580,54 +636,35 @@ class App {
   // Notifications
   // ========================================
 
-  private showNotification(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-    const colors = {
-      info: 'rgba(33, 150, 243, 0.9)',
-      success: 'rgba(76, 175, 80, 0.9)',
-      error: 'rgba(244, 67, 54, 0.9)'
+  private showNotification(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info'): void {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const icons: Record<string, string> = {
+      info: '💬',
+      success: '✓',
+      error: '✕',
+      warning: '⚠️'
     };
 
-    const notif = document.createElement('div');
-    notif.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: ${colors[type]};
-      color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 2000;
-      animation: slideUp 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+      <span class="toast-icon">${icons[type]}</span>
+      <span>${message}</span>
     `;
-    notif.textContent = message;
-    document.body.appendChild(notif);
+    
+    container.appendChild(toast);
 
+    // Auto remove after 3 seconds
     setTimeout(() => {
-      notif.style.opacity = '0';
-      notif.style.transition = 'opacity 0.3s';
-      setTimeout(() => notif.remove(), 300);
-    }, 1700);
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   }
 }
 
-// Animations
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(style);
-
-// Initialize app only once
+// Initialize app
 let appInstance: App | null = null;
 
 function initApp() {
@@ -636,11 +673,12 @@ function initApp() {
     return;
   }
   
-  const canvas = document.getElementById('canvas');
-  if (canvas) {
+  // Wait for modal elements to be ready
+  const modal = document.getElementById('username-modal');
+  if (modal) {
     appInstance = new App();
   } else {
-    console.error('Canvas element not found');
+    console.error('Modal element not found');
   }
 }
 

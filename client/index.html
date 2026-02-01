@@ -5,9 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Collaborative Canvas</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="app">
+  <!-- Username Modal -->
+  <div id="username-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-icon">🎨</div>
+        <h1>Welcome to Collaborative Canvas</h1>
+        <p>Draw, create, and collaborate in real-time with others</p>
+      </div>
+      <div class="modal-body">
+        <label for="username-input">Choose your display name</label>
+        <input 
+          type="text" 
+          id="username-input" 
+          placeholder="Enter your name..." 
+          maxlength="20"
+          autocomplete="off"
+          autofocus
+        >
+        <span class="input-hint">This will be visible to other collaborators</span>
+      </div>
+      <div class="modal-footer">
+        <button id="join-btn" class="btn-primary">
+          <span>Join Canvas</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <div id="app" class="hidden">
     <!-- Room Bar -->
     <div class="room-bar">
       <div class="room-info">

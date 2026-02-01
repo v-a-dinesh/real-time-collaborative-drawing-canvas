@@ -147,9 +147,11 @@ function isValidStrokeStart(data) {
 }
 io.on("connection", (socket) => {
   console.log(`[${(/* @__PURE__ */ new Date()).toISOString()}] New connection: ${socket.id}`);
+  const authUsername = socket.handshake.auth?.username;
+  const sanitizedUsername = authUsername?.trim().slice(0, 20) || null;
   const user = {
     id: socket.id,
-    name: generateUserName(),
+    name: sanitizedUsername || generateUserName(),
     color: getNextColor(),
     cursor: { x: 0, y: 0 },
     roomId: DEFAULT_ROOM

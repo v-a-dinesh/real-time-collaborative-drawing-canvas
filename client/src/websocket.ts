@@ -56,13 +56,18 @@ export class WebSocketManager {
     console.log('WebSocketManager created');
   }
 
-  public connect(): void {
+  public connect(username?: string): void {
     if (this.socket?.connected) {
       console.log('Already connected');
       return;
     }
 
     this.connectionState = 'connecting';
+
+    // Store username for reconnection
+    if (username) {
+      this.userName = username;
+    }
 
     // Auto-detect server URL: use current origin in production, localhost in development
     const serverUrl = import.meta.env.PROD 
@@ -78,7 +83,10 @@ export class WebSocketManager {
       reconnectionDelayMax: 5000,
       timeout: 20000,
       forceNew: true,
-      autoConnect: true
+      autoConnect: true,
+      auth: {
+        username: this.userName || undefined
+      }
     });
 
     this.setupEventListeners();
